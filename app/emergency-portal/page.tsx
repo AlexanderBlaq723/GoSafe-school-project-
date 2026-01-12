@@ -51,15 +51,15 @@ export default function EmergencyServicesPortal() {
       const currentServiceId = user?.id || "es-police-001"
       console.log('Fetching assignments for service:', currentServiceId)
       const response = await fetch(`/api/service-feedback?serviceId=${currentServiceId}`)
-      
+
       if (!response.ok) {
         console.error('API response not ok:', response.status, response.statusText)
         return
       }
-      
+
       const text = await response.text()
       console.log('Raw response:', text)
-      
+
       let data
       try {
         data = JSON.parse(text)
@@ -68,7 +68,7 @@ export default function EmergencyServicesPortal() {
         console.error('Response text:', text)
         return
       }
-      
+
       console.log('API response:', data)
       setAssignments(data.assignments || [])
     } catch (error) {
@@ -162,7 +162,7 @@ export default function EmergencyServicesPortal() {
                 {assignments.length} Cases
               </Badge>
             </div>
-            
+
             <div className="space-y-4">
               {assignments.length === 0 ? (
                 <Card className="border-0 shadow-lg bg-white/60 backdrop-blur-sm animate-in fade-in duration-700">
@@ -171,8 +171,8 @@ export default function EmergencyServicesPortal() {
                       <AlertCircle className="h-12 w-12 text-gray-400" />
                     </div>
                     <h3 className="text-xl font-semibold text-gray-700 mb-2">No Active Assignments</h3>
-                    <p className="text-gray-500 mb-4">You're all caught up! New cases will appear here.</p>
-                    
+                    <p className="text-gray-500 mb-4">You&apos;re all caught up! New cases will appear here.</p>
+
                     <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
                       <p className="text-sm text-gray-700 font-medium mb-2">
                         🔍 Debug Info:
@@ -183,7 +183,7 @@ export default function EmergencyServicesPortal() {
                         <p>• API URL: <code>/api/service-feedback?serviceId={serviceId}</code></p>
                       </div>
                     </div>
-                    
+
                     {user?.id === 'es-police-001' && (
                       <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                         <p className="text-sm text-blue-700 font-medium mb-2">
@@ -198,11 +198,10 @@ export default function EmergencyServicesPortal() {
                 </Card>
               ) : (
                 assignments.map((assignment, index) => (
-                  <Card 
-                    key={assignment.id} 
-                    className={`cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border-0 shadow-lg bg-white/80 backdrop-blur-sm animate-in slide-in-from-left duration-500 ${
-                      selectedAssignment?.id === assignment.id ? "ring-2 ring-blue-400 shadow-blue-200/50 scale-[1.02]" : "hover:shadow-blue-100/50"
-                    }`}
+                  <Card
+                    key={assignment.id}
+                    className={`cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border-0 shadow-lg bg-white/80 backdrop-blur-sm animate-in slide-in-from-left duration-500 ${selectedAssignment?.id === assignment.id ? "ring-2 ring-blue-400 shadow-blue-200/50 scale-[1.02]" : "hover:shadow-blue-100/50"
+                      }`}
                     style={{ animationDelay: `${index * 100}ms` }}
                     onClick={() => setSelectedAssignment(assignment)}
                   >
@@ -219,11 +218,10 @@ export default function EmergencyServicesPortal() {
                         </div>
                         <div className="text-right space-y-2">
                           {getStatusBadge(assignment.status)}
-                          <div className={`text-sm font-bold px-3 py-1 rounded-full ${
-                            assignment.severity === 'high' ? 'bg-red-100 text-red-700' :
-                            assignment.severity === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-green-100 text-green-700'
-                          }`}>
+                          <div className={`text-sm font-bold px-3 py-1 rounded-full ${assignment.severity === 'high' ? 'bg-red-100 text-red-700' :
+                              assignment.severity === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-green-100 text-green-700'
+                            }`}>
                             {assignment.severity.toUpperCase()}
                           </div>
                         </div>
@@ -275,11 +273,10 @@ export default function EmergencyServicesPortal() {
                       </div>
                       <div className="flex justify-between p-2 bg-white rounded-lg">
                         <span className="font-medium text-gray-600">Severity:</span>
-                        <span className={`font-bold ${
-                          selectedAssignment.severity === 'high' ? 'text-red-600' :
-                          selectedAssignment.severity === 'medium' ? 'text-yellow-600' :
-                          'text-green-600'
-                        }`}>{selectedAssignment.severity.toUpperCase()}</span>
+                        <span className={`font-bold ${selectedAssignment.severity === 'high' ? 'text-red-600' :
+                            selectedAssignment.severity === 'medium' ? 'text-yellow-600' :
+                              'text-green-600'
+                          }`}>{selectedAssignment.severity.toUpperCase()}</span>
                       </div>
                       <div className="p-2 bg-white rounded-lg">
                         <span className="font-medium text-gray-600 block mb-1">Description:</span>
@@ -314,7 +311,7 @@ export default function EmergencyServicesPortal() {
                         <label className="block text-lg font-bold text-gray-900">Quick Actions</label>
                         <div className="grid grid-cols-1 gap-3">
                           {selectedAssignment.status === "assigned" && (
-                            <Button 
+                            <Button
                               onClick={() => updateAssignmentStatus(selectedAssignment.id, "acknowledged")}
                               className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-all duration-200 hover:scale-105"
                             >
@@ -323,7 +320,7 @@ export default function EmergencyServicesPortal() {
                             </Button>
                           )}
                           {(selectedAssignment.status === "acknowledged" || selectedAssignment.status === "assigned") && (
-                            <Button 
+                            <Button
                               onClick={() => updateAssignmentStatus(selectedAssignment.id, "in_progress")}
                               className="w-full h-12 bg-orange-600 hover:bg-orange-700 text-white font-semibold transition-all duration-200 hover:scale-105"
                             >
@@ -332,7 +329,7 @@ export default function EmergencyServicesPortal() {
                             </Button>
                           )}
                           {selectedAssignment.status === "in_progress" && (
-                            <Button 
+                            <Button
                               onClick={() => updateAssignmentStatus(selectedAssignment.id, "completed")}
                               className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-semibold transition-all duration-200 hover:scale-105"
                             >

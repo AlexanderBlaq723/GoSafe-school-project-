@@ -118,7 +118,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
-              
+
               <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm animate-in slide-in-from-bottom duration-700">
                 <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t-lg">
                   <CardTitle className="text-2xl font-bold">Service Information</CardTitle>
@@ -170,7 +170,7 @@ export default function DashboardPage() {
                           Welcome back, {user?.fullName}
                         </h1>
                         <p className="text-gray-600 text-lg font-medium">
-                          Here's what's happening with your reports today.
+                          Here&apos;s what&apos;s happening with your reports today.
                         </p>
                         {user?.specialId && (
                           <p className="text-sm text-blue-600 font-semibold mt-2 bg-blue-50 px-3 py-1 rounded-full w-fit">
@@ -235,7 +235,7 @@ export default function DashboardPage() {
                       </Button>
                     </CardContent>
                   </Card>
-                  
+
                   <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm hover-lift">
                     <CardHeader className="bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-t-lg">
                       <CardTitle className="text-lg font-bold flex items-center gap-2">
@@ -278,14 +278,14 @@ export default function DashboardPage() {
                   const Icon = stat.icon
                   const gradients = [
                     'from-blue-50 to-blue-100',
-                    'from-yellow-50 to-yellow-100', 
+                    'from-yellow-50 to-yellow-100',
                     'from-orange-50 to-orange-100',
                     'from-green-50 to-green-100'
                   ]
                   const iconBgs = [
                     'bg-blue-200',
                     'bg-yellow-200',
-                    'bg-orange-200', 
+                    'bg-orange-200',
                     'bg-green-200'
                   ]
                   return (
