@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       "SELECT COUNT(*) as count FROM reports WHERE id LIKE ?",
       [`RPT-${year}-%`]
     )
-    const nextNumber = ((countResult[0]?.count || 0) + 1).toString().padStart(10, '0')
+    const nextNumber = ((countResult[0]?.count ?? 0) + 1).toString().padStart(10, '0')
     const reportId = `RPT-${year}-${nextNumber}`
     await query(
       `INSERT INTO reports (
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
     // Route report to nearest DVLA office admin if location provided
     if (latitude && longitude) {
       try {
-        const offices = await query<any[]>(
+        const offices = await query<Array<{ id: string; office_name: string; latitude: number; longitude: number; distance: number }>>(
           `SELECT id, office_name, latitude, longitude,
            (6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance
            FROM dvla_offices WHERE is_active = true

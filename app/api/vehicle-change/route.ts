@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const [driver] = await query<any[]>(
+    const driver = await query<Array<{ vehicle_number: string }>>(
       'SELECT vehicle_number FROM users WHERE id = ?',
       [driverId]
     )
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
       `INSERT INTO vehicle_change_requests 
        (id, driver_id, old_vehicle_number, new_vehicle_number, reason, proof_document_url)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [requestId, driverId, driver?.vehicle_number || null, newVehicleNumber, reason, proofDocumentUrl || null]
+      [requestId, driverId, driver[0]?.vehicle_number || null, newVehicleNumber, reason, proofDocumentUrl || null]
     )
 
     return NextResponse.json({ success: true, requestId })

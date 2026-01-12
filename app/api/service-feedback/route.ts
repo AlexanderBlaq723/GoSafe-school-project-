@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('=== API ERROR ===')
     console.error('Error details:', error)
-    return NextResponse.json({ error: 'Failed to fetch assignments', details: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to fetch assignments', details: (error as Error).message }, { status: 500 })
   }
 }
 
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Feedback submission error:', error)
-    console.error('Error stack:', error.stack)
-    return NextResponse.json({ error: 'Failed to submit feedback', details: error.message }, { status: 500 })
+    console.error('Error stack:', (error as Error).stack)
+    return NextResponse.json({ error: 'Failed to submit feedback', details: (error as Error).message }, { status: 500 })
   }
 }
