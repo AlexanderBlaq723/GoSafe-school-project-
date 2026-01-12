@@ -55,7 +55,8 @@ export async function POST(request: NextRequest) {
       "SELECT COUNT(*) as count FROM reports WHERE id LIKE ?",
       [`RPT-${year}-%`]
     )
-    const nextNumber = ((countResult[0]?.count ?? 0) + 1).toString().padStart(10, '0')
+    const count = countResult[0]?.count ?? 0
+    const nextNumber = (count + 1).toString().padStart(10, '0')
     const reportId = `RPT-${year}-${nextNumber}`
     await query(
       `INSERT INTO reports (
