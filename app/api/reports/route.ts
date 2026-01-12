@@ -51,11 +51,11 @@ export async function POST(request: NextRequest) {
     const year = new Date().getFullYear()
     
     // Get the count of reports for this year to generate sequential number
-    const [countResult] = await query<any[]>(
+    const countResult = await query<any[]>(
       "SELECT COUNT(*) as count FROM reports WHERE id LIKE ?",
       [`RPT-${year}-%`]
     )
-    const nextNumber = (countResult.count + 1).toString().padStart(10, '0')
+    const nextNumber = ((countResult[0]?.count || 0) + 1).toString().padStart(10, '0')
     const reportId = `RPT-${year}-${nextNumber}`
     await query(
       `INSERT INTO reports (
