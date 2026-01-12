@@ -130,12 +130,12 @@ function BusRequestsTab() {
 }
 
 export default function AdminDashboardPage() {
-  const [drivers, setDrivers] = useState([])
-  const [vehicleRequests, setVehicleRequests] = useState([])
-  const [flaggedDrivers, setFlaggedDrivers] = useState([])
-  const [reports, setReports] = useState([])
-  const [emergencyServices, setEmergencyServices] = useState([])
-  const [allEmergencyServices, setAllEmergencyServices] = useState([])
+  const [drivers, setDrivers] = useState<any[]>([])
+  const [vehicleRequests, setVehicleRequests] = useState<any[]>([])
+  const [flaggedDrivers, setFlaggedDrivers] = useState<any[]>([])
+  const [reports, setReports] = useState<any[]>([])
+  const [emergencyServices, setEmergencyServices] = useState<any[]>([])
+  const [allEmergencyServices, setAllEmergencyServices] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
