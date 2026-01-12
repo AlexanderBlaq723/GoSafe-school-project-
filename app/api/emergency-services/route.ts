@@ -128,16 +128,18 @@ export async function POST(request: NextRequest) {
             [key: string]: any
           }
 
-          let reportObj: Report | undefined = undefined
+          let reportObj: Report | null = null
           if (incomingReport) {
-            reportObj = incomingReport
+            reportObj = incomingReport as Report
           } else if (reportId) {
             const reports = await queryDatabase<Report[]>(
               'incident_emergency',
               'SELECT * FROM reports WHERE id = ?',
               [reportId]
             )
-            if (reports.length > 0) reportObj = reports[0]
+            if (reports && reports.length > 0) {
+              reportObj = reports[0]
+            }
           }
 
           if (reportObj) {
