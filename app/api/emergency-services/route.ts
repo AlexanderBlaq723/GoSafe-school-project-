@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
               [reportId]
             )
             if (reports && Array.isArray(reports) && reports.length > 0) {
-              reportObj = reports[0] as Report
+              reportObj = reports[0] as unknown as Report
             }
           }
 
