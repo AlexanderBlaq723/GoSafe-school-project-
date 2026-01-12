@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query, queryDatabase } from '@/lib/db'
+import { z } from 'zod'
 import { v4 as uuidv4 } from 'uuid'
 import NotificationService from '@/lib/notification-service'
 
@@ -17,11 +18,34 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 
 export async function POST(request: NextRequest) {
   try {
-    const { reportId, serviceTypes, latitude, longitude, assignedBy } = await request.json()
+    // Validate incoming body using Zod
+    const ReportSchema = z.object({
+      incident_type: z.string(),
+      location: z.string(),
+      description: z.string().optional(),
+      severity: z.string().optional()
+    })
+
+    const BodySchema = z.object({
+      reportId: z.string().optional(),
+      serviceTypes: z.array(z.string()),
+      latitude: z.number(),
+      longitude: z.number(),
+      assignedBy: z.string().optional(),
+      report: ReportSchema.optional()
+    })
+
+    const rawBody = await request.json()
+    const parsed = BodySchema.safeParse(rawBody)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid request body', details: parsed.error.errors }, { status: 400 })
+    }
+
+    const { reportId, serviceTypes, latitude, longitude, assignedBy, report: incomingReport } = parsed.data
 
     console.log('Emergency service request (v2):', { reportId, serviceTypes, latitude, longitude })
 
-    if (!reportId || !serviceTypes || !latitude || !longitude) {
+    if ((!reportId && !incomingReport) || !serviceTypes || latitude === undefined || longitude === undefined) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -94,27 +118,40 @@ export async function POST(request: NextRequest) {
 
           console.log(`Created assignment ${assignmentId} for ${nearestService.service_name}`)
 
-          // Get report details for notification
-          const reports = await queryDatabase<any[]>(
-            'incident_emergency',
-            'SELECT * FROM reports WHERE id = ?',
-            [reportId]
-          )
+          // Get report details for notification. Prefer incoming report (from body) if provided,
+          // otherwise fetch from DB and type it as `Report[]`.
+          type Report = {
+            incident_type: string
+            location: string
+            description?: string
+            severity?: string
+            [key: string]: any
+          }
 
-          if (reports.length > 0) {
-            const report = reports[0]
-            
+          let reportObj: Report | undefined = undefined
+          if (incomingReport) {
+            reportObj = incomingReport
+          } else if (reportId) {
+            const reports = await queryDatabase<Report[]>(
+              'incident_emergency',
+              'SELECT * FROM reports WHERE id = ?',
+              [reportId]
+            )
+            if (reports.length > 0) reportObj = reports[0]
+          }
+
+          if (reportObj) {
             try {
               await NotificationService.notifyEmergencyService(
                 nearestService.service_name,
                 nearestService.phone,
                 nearestService.email,
-                report.incident_type,
-                report.location,
+                reportObj.incident_type,
+                reportObj.location,
                 assignmentId,
                 {
-                  description: report.description,
-                  severity: report.severity,
+                  description: reportObj.description,
+                  severity: reportObj.severity,
                   reportedBy: 'User Report'
                 }
               )
