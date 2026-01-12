@@ -50,14 +50,16 @@ export async function POST(request: NextRequest) {
     // Generate report ID in format RPT-YYYY-0000000001 (sequential)
     const year = new Date().getFullYear()
     
-    // Get the count of reports for this year to generate sequential number
-    const countResult = await query<Array<{ count: number }>>(
+    // Fixed: Proper type assertion to resolve the TypeScript error
+    const countResult = await query(
       "SELECT COUNT(*) as count FROM reports WHERE id LIKE ?",
       [`RPT-${year}-%`]
-    )
-    const count = countResult[0]?.count ?? 0
+    ) as { count: number | bigint }[]
+
+    const count = Number(countResult[0]?.count ?? 0)
     const nextNumber = (count + 1).toString().padStart(10, '0')
     const reportId = `RPT-${year}-${nextNumber}`
+
     await query(
       `INSERT INTO reports (
         id, user_id, incident_type, description, location, latitude, longitude, 
@@ -123,7 +125,7 @@ export async function POST(request: NextRequest) {
     if (vehicleNumber && ['reckless_driving', 'overloading', 'driver_misconduct', 'overcharging'].includes(type)) {
       try {
         await query(
-          'UPDATE users SET reported_count = reported_count + 1, is_flagged = CASE WHEN reported_count >= 2 THEN true ELSE is_flagged END WHERE vehicle_number = ? AND role = "driver"',
+          'UPDATE users SET reported_count = reported_count + 1, is_flagged = CASE WHEN reported_count + 1 >= 2 THEN true ELSE is_flagged END WHERE vehicle_number = ? AND role = "driver"',
           [vehicleNumber]
         )
       } catch (error) {
