@@ -137,8 +137,8 @@ export async function POST(request: NextRequest) {
               'SELECT * FROM reports WHERE id = ?',
               [reportId]
             )
-            if (reports && reports.length > 0) {
-              reportObj = reports[0]
+            if (reports && Array.isArray(reports) && reports.length > 0) {
+              reportObj = reports[0] as Report
             }
           }
 
