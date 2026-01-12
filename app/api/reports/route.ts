@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     const year = new Date().getFullYear()
     
     // Get the count of reports for this year to generate sequential number
-    const countResult = await query<any[]>(
+    const countResult = await query<Array<{ count: number }>>(
       "SELECT COUNT(*) as count FROM reports WHERE id LIKE ?",
       [`RPT-${year}-%`]
     )
