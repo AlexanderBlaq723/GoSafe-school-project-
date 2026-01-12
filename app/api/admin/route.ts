@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
           [data.adminId, data.notes || null, data.requestId]
         )
 
-        const [request] = await query<any[]>(
+        const [request] = await query<any>(
           'SELECT driver_id, new_vehicle_number FROM vehicle_change_requests WHERE id = ?',
           [data.requestId]
         )
