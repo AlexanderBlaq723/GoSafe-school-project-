@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const driver = await query<Array<{ vehicle_number: string }>>(
+    const driver = await query<{ vehicle_number: string }>(
       'SELECT vehicle_number FROM users WHERE id = ?',
       [driverId]
     )

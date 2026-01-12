@@ -31,7 +31,7 @@ export default function VehicleChangePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           driverId: user.id,
-          oldVehicleNumber: user.vehicle_number,
+          oldVehicleNumber: user.vehicleNumber,
           newVehicleNumber: formData.newVehicleNumber,
           reason: formData.reason,
           proofDocumentUrl: formData.proofDocument
@@ -69,7 +69,7 @@ export default function VehicleChangePage() {
                 Vehicle Change Request
               </CardTitle>
               <CardDescription>
-                Current Vehicle: {user?.vehicle_number || "Not set"}
+                Current Vehicle: {user?.vehicleNumber || "Not set"}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -79,7 +79,7 @@ export default function VehicleChangePage() {
                   <Input
                     id="newVehicleNumber"
                     value={formData.newVehicleNumber}
-                    onChange={(e) => setFormData({...formData, newVehicleNumber: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, newVehicleNumber: e.target.value })}
                     placeholder="e.g., GH-5678-21"
                     required
                   />
@@ -90,7 +90,7 @@ export default function VehicleChangePage() {
                   <Textarea
                     id="reason"
                     value={formData.reason}
-                    onChange={(e) => setFormData({...formData, reason: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
                     placeholder="Explain why you need to change your vehicle..."
                     rows={4}
                     required
@@ -102,7 +102,7 @@ export default function VehicleChangePage() {
                   <Input
                     id="proofDocument"
                     value={formData.proofDocument}
-                    onChange={(e) => setFormData({...formData, proofDocument: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, proofDocument: e.target.value })}
                     placeholder="Link to proof document (e.g., new registration)"
                   />
                   <p className="text-sm text-gray-500 mt-1">
