@@ -118,9 +118,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error creating test data:', error)
+    const details = error instanceof Error ? error.message : String(error)
     return NextResponse.json({ 
       error: 'Failed to create test data', 
-      details: error.message 
+      details
     }, { status: 500 })
   }
 }
