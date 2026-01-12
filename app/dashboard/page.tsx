@@ -4,7 +4,7 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { AlertCircle, CheckCircle, Clock, Plus, Bus } from "lucide-react"
+import { AlertCircle, CheckCircle, Clock, Plus, Bus, Car, Activity } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth-context"
 import { useEffect, useState } from "react"
@@ -61,12 +61,14 @@ export default function DashboardPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "sent":
+      case "pending":
+        return "bg-yellow-100 text-yellow-800"
+      case "in_progress":
         return "bg-blue-100 text-blue-800"
-      case "reviewed":
-        return "bg-orange-100 text-orange-800"
-      case "handled":
+      case "resolved":
         return "bg-green-100 text-green-800"
+      case "closed":
+        return "bg-gray-100 text-gray-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
@@ -89,143 +91,281 @@ export default function DashboardPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={["driver", "passenger"]}>
+    <ProtectedRoute allowedRoles={["driver", "passenger", "towing_service", "emergency_service"]}>
       <DashboardLayout>
-        <div className="space-y-8">
-          {/* Welcome Section */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Welcome back, {user?.fullName}</h1>
-              <p className="text-gray-600 mt-1">Here's what's happening with your reports today.</p>
-            </div>
-            <div className="flex gap-2">
-              <Button asChild size="lg">
-                <Link href="/dashboard/report">
-                  <Plus className="mr-2 h-5 w-5" />
-                  New Report
-                </Link>
-              </Button>
-            </div>
-          </div>
-
-          {/* Quick Actions for Passengers */}
-          {user?.role === 'passenger' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <BusRequestForm />
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5" />
-                    Quick Report
-                  </CardTitle>
-                  <CardDescription>Report incidents with photo/video evidence</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button asChild className="w-full">
-                    <Link href="/dashboard/report">Report Issue</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Quick Actions for Drivers */}
-          {user?.role === 'driver' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Bus className="h-5 w-5" />
-                    Bus Requests
-                  </CardTitle>
-                  <CardDescription>View and accept passenger bus requests</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button asChild className="w-full">
-                    <Link href="/dashboard/bus-requests">View Requests</Link>
-                  </Button>
-                </CardContent>
-              </Card>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+          {user?.role === "towing_service" || user?.role === "emergency_service" ? (
+            <div className="max-w-6xl mx-auto p-6 space-y-8">
+              <div className="animate-in slide-in-from-top duration-500">
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/20">
+                  <div className="flex items-center gap-6">
+                    <div className="p-4 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl text-white">
+                      <Car className="h-12 w-12" />
+                    </div>
+                    <div>
+                      <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-2">
+                        Welcome, {user?.fullName}
+                      </h1>
+                      <p className="text-gray-600 text-lg font-medium">
+                        {user.role === "towing_service" ? "Towing" : "Emergency"} Service Dashboard
+                      </p>
+                      {user?.specialId && (
+                        <p className="text-sm text-blue-600 font-semibold mt-2 bg-blue-50 px-3 py-1 rounded-full w-fit">
+                          Service ID: {user.specialId}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
               
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5" />
-                    Report Issue
-                  </CardTitle>
-                  <CardDescription>Report road hazards and incidents</CardDescription>
+              <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm animate-in slide-in-from-bottom duration-700">
+                <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t-lg">
+                  <CardTitle className="text-2xl font-bold">Service Information</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <Button asChild className="w-full">
-                    <Link href="/dashboard/report">Report Issue</Link>
-                  </Button>
+                <CardContent className="p-8 space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                        <div className="text-sm font-bold text-blue-700 uppercase tracking-wide mb-1">Service Type</div>
+                        <div className="text-lg font-bold text-gray-900">{(user as any).service_type || (user as any).serviceType || 'N/A'}</div>
+                      </div>
+                      <div className="p-4 bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl border border-gray-100">
+                        <div className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-1">Service ID</div>
+                        <div className="text-lg font-bold text-gray-900">{user.id}</div>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      {(user as any).branch_number && (
+                        <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100">
+                          <div className="text-sm font-bold text-green-700 uppercase tracking-wide mb-1">Branch Number</div>
+                          <div className="text-lg font-bold text-gray-900">{(user as any).branch_number}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="pt-6">
+                    <Button asChild className="w-full h-14 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold text-lg transition-all duration-200 hover:scale-105">
+                      <Link href="/emergency-portal">
+                        <Activity className="mr-3 h-6 w-6" />
+                        Access Service Portal
+                      </Link>
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </div>
-          )}
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {statsDisplay.map((stat) => {
-              const Icon = stat.icon
-              return (
-                <Card key={stat.label}>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
+          ) : (
+            <div className="max-w-7xl mx-auto p-6 space-y-8">
+              {/* Welcome Section */}
+              <div className="animate-in slide-in-from-top duration-500">
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/20">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                    <div className="flex items-center gap-6">
+                      <div className="p-4 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl text-white animate-float">
+                        <AlertCircle className="h-12 w-12" />
+                      </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-600">{stat.label}</p>
-                        <p className="text-3xl font-bold mt-2">{stat.value}</p>
-                      </div>
-                      <div className={`p-3 rounded-full bg-gray-100 ${stat.color}`}>
-                        <Icon className="h-6 w-6" />
+                        <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-2">
+                          Welcome back, {user?.fullName}
+                        </h1>
+                        <p className="text-gray-600 text-lg font-medium">
+                          Here's what's happening with your reports today.
+                        </p>
+                        {user?.specialId && (
+                          <p className="text-sm text-blue-600 font-semibold mt-2 bg-blue-50 px-3 py-1 rounded-full w-fit">
+                            Your ID: {user.specialId}
+                          </p>
+                        )}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
+                    <div className="flex gap-3">
+                      <Button asChild size="lg" className="h-14 px-8 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold transition-all duration-200 hover:scale-105">
+                        <Link href="/dashboard/report">
+                          <Plus className="mr-3 h-6 w-6" />
+                          New Report
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-          {/* Recent Activity */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Reports</CardTitle>
-              <CardDescription>Your latest incident reports and their current status</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="text-center py-8 text-gray-500">Loading...</div>
-              ) : recentReports.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">No reports yet. Submit your first report!</div>
-              ) : (
-                <div className="space-y-4">
-                  {recentReports.map((report) => (
-                    <div
-                      key={report.id}
-                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium">{report.title}</h3>
-                          <Badge variant="outline" className="text-xs">
-                            {getTypeLabel(report.type)}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-gray-600">{report.location}</p>
-                        <p className="text-xs text-gray-500">{formatDate(report.created_at)}</p>
-                      </div>
-                      <Badge className={getStatusColor(report.status)}>{report.status}</Badge>
-                    </div>
-                  ))}
+              {/* Quick Actions for Passengers */}
+              {user?.role === 'passenger' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in slide-in-from-left duration-700">
+                  <div className="hover-lift">
+                    <BusRequestForm />
+                  </div>
+                  <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm hover-lift">
+                    <CardHeader className="bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-t-lg">
+                      <CardTitle className="text-xl font-bold flex items-center gap-3">
+                        <Bus className="h-6 w-6" />
+                        My Bus Requests
+                      </CardTitle>
+                      <CardDescription className="text-green-100">
+                        View your bus requests and driver acceptances
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <Button asChild className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white font-semibold transition-all duration-200 hover:scale-105">
+                        <Link href="/dashboard/my-bus-requests">View My Requests</Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
                 </div>
               )}
-              <div className="mt-6">
-                <Button asChild variant="outline" className="w-full bg-transparent">
-                  <Link href="/dashboard/history">View All Reports</Link>
-                </Button>
+
+              {/* Quick Actions for Drivers */}
+              {user?.role === 'driver' && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in slide-in-from-right duration-700">
+                  <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm hover-lift">
+                    <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-t-lg">
+                      <CardTitle className="text-lg font-bold flex items-center gap-2">
+                        <Bus className="h-5 w-5" />
+                        Bus Requests
+                      </CardTitle>
+                      <CardDescription className="text-blue-100">
+                        View and accept passenger requests
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <Button asChild className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold transition-all duration-200 hover:scale-105">
+                        <Link href="/dashboard/bus-requests">View Requests</Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm hover-lift">
+                    <CardHeader className="bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-t-lg">
+                      <CardTitle className="text-lg font-bold flex items-center gap-2">
+                        <AlertCircle className="h-5 w-5" />
+                        Report Issue
+                      </CardTitle>
+                      <CardDescription className="text-orange-100">
+                        Report road hazards and incidents
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <Button asChild className="w-full h-12 bg-gradient-to-r from-orange-600 to-red-700 hover:from-orange-700 hover:to-red-800 text-white font-semibold transition-all duration-200 hover:scale-105">
+                        <Link href="/dashboard/report">Report Issue</Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm hover-lift">
+                    <CardHeader className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-t-lg">
+                      <CardTitle className="text-lg font-bold flex items-center gap-2">
+                        <Car className="h-5 w-5" />
+                        Change Vehicle
+                      </CardTitle>
+                      <CardDescription className="text-purple-100">
+                        Request vehicle change approval
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <Button asChild className="w-full h-12 bg-gradient-to-r from-purple-600 to-indigo-700 hover:from-purple-700 hover:to-indigo-800 text-white font-semibold transition-all duration-200 hover:scale-105">
+                        <Link href="/dashboard/vehicle-change">Request Change</Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-in slide-in-from-bottom duration-1000">
+                {statsDisplay.map((stat, index) => {
+                  const Icon = stat.icon
+                  const gradients = [
+                    'from-blue-50 to-blue-100',
+                    'from-yellow-50 to-yellow-100', 
+                    'from-orange-50 to-orange-100',
+                    'from-green-50 to-green-100'
+                  ]
+                  const iconBgs = [
+                    'bg-blue-200',
+                    'bg-yellow-200',
+                    'bg-orange-200', 
+                    'bg-green-200'
+                  ]
+                  return (
+                    <Card key={stat.label} className={`border-0 shadow-xl bg-gradient-to-br ${gradients[index]} hover-lift animate-fade-in-scale`} style={{ animationDelay: `${index * 150}ms` }}>
+                      <CardContent className="pt-8 pb-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-bold text-gray-700 uppercase tracking-wide">{stat.label}</p>
+                            <p className="text-4xl font-bold mt-3 text-gray-900">{stat.value}</p>
+                            <p className="text-xs text-gray-600 mt-1">Total count</p>
+                          </div>
+                          <div className={`p-4 rounded-2xl ${iconBgs[index]} ${stat.color}`}>
+                            <Icon className="h-8 w-8" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
               </div>
-            </CardContent>
-          </Card>
+
+              {/* Recent Activity */}
+              <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm animate-in slide-in-from-bottom duration-1200">
+                <CardHeader className="bg-gradient-to-r from-slate-600 to-gray-700 text-white rounded-t-lg">
+                  <CardTitle className="text-2xl font-bold">Recent Reports</CardTitle>
+                  <CardDescription className="text-slate-200">
+                    Your latest incident reports and their current status
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                  {isLoading ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
+                      <p className="text-gray-600 text-lg">Loading reports...</p>
+                    </div>
+                  ) : recentReports.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="p-4 bg-gray-100 rounded-full w-fit mx-auto mb-4">
+                        <AlertCircle className="h-12 w-12 text-gray-400" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-700 mb-2">No Reports Yet</h3>
+                      <p className="text-gray-500 text-lg">Submit your first report to get started!</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {recentReports.map((report, index) => (
+                        <div
+                          key={report.id}
+                          className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 border-0 rounded-xl shadow-lg bg-white hover:shadow-xl transition-all duration-300 hover:-translate-y-1 animate-slide-up`}
+                          style={{ animationDelay: `${index * 100}ms` }}
+                        >
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center gap-3">
+                              <h3 className="font-bold text-lg text-gray-900">{report.description || report.title || 'Untitled Report'}</h3>
+                              <Badge className="bg-blue-100 text-blue-800 px-3 py-1 font-semibold">
+                                {getTypeLabel(report.incident_type || report.type || 'other')}
+                              </Badge>
+                            </div>
+                            <p className="text-gray-700 font-medium">{report.location}</p>
+                            <p className="text-sm text-gray-500 flex items-center gap-2">
+                              <Clock className="h-4 w-4" />
+                              {formatDate(report.created_at)}
+                            </p>
+                          </div>
+                          <Badge className={`${getStatusColor(report.status)} px-4 py-2 font-bold text-sm`}>
+                            {report.status.toUpperCase()}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-8">
+                    <Button asChild className="w-full h-12 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 text-white font-semibold transition-all duration-200 hover:scale-105">
+                      <Link href="/dashboard/history">View All Reports</Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       </DashboardLayout>
     </ProtectedRoute>

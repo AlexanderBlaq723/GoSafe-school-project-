@@ -1,63 +1,51 @@
--- Ride & Location Database Schema
+CREATE DATABASE IF NOT EXISTS ride_location_database;
+USE ride_location_database;
 
--- Buses table
-CREATE TABLE buses (
-  BusID CHAR(36) PRIMARY KEY DEFAULT (UUID()),
-  BusNumber VARCHAR(50) UNIQUE NOT NULL,
-  Capacity INT NOT NULL,
-  Status ENUM('active', 'maintenance', 'inactive') DEFAULT 'active',
-  DriverID CHAR(36),
-  transport_company VARCHAR(255),
-  current_latitude DECIMAL(10, 8),
-  current_longitude DECIMAL(11, 8),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS bus_requests (
+    id VARCHAR(36) PRIMARY KEY,
+    passenger_id VARCHAR(36) NOT NULL,
+    driver_id VARCHAR(36),
+    location VARCHAR(255) NOT NULL,
+    pickup_latitude DECIMAL(10, 8) NOT NULL,
+    pickup_longitude DECIMAL(11, 8) NOT NULL,
+    destination VARCHAR(255),
+    destination_latitude DECIMAL(10, 8),
+    destination_longitude DECIMAL(11, 8),
+    request_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_peak_hour BOOLEAN DEFAULT FALSE,
+    request_status ENUM('pending', 'accepted', 'completed', 'cancelled') DEFAULT 'pending',
+    passenger_count INT DEFAULT 1,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Bus Requests table
-CREATE TABLE bus_requests (
-  RequestID CHAR(36) PRIMARY KEY DEFAULT (UUID()),
-  PassengerID CHAR(36) NOT NULL,
-  BusID CHAR(36),
-  DriverID CHAR(36),
-  RequestTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  Location VARCHAR(255) NOT NULL,
-  latitude DECIMAL(10, 8),
-  longitude DECIMAL(11, 8),
-  PassengerCount INT DEFAULT 1,
-  RequestStatus ENUM('pending', 'assigned', 'completed', 'cancelled') DEFAULT 'pending',
-  destination VARCHAR(255),
-  destination_latitude DECIMAL(10, 8),
-  destination_longitude DECIMAL(11, 8),
-  is_peak_hour BOOLEAN DEFAULT FALSE,
-  reason TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (BusID) REFERENCES buses(BusID) ON DELETE SET NULL
+CREATE TABLE IF NOT EXISTS hot_spots (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    location VARCHAR(255) NOT NULL,
+    latitude DECIMAL(10, 8) NOT NULL,
+    longitude DECIMAL(11, 8) NOT NULL,
+    request_count INT NOT NULL,
+    detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE
 );
 
--- Hot Spots table for tracking high-demand locations
-CREATE TABLE hot_spots (
-  id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
-  location VARCHAR(255) NOT NULL,
-  latitude DECIMAL(10, 8) NOT NULL,
-  longitude DECIMAL(11, 8) NOT NULL,
-  request_count INT DEFAULT 0,
-  last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS vehicle_change_requests (
+    id VARCHAR(36) PRIMARY KEY,
+    driver_id VARCHAR(36) NOT NULL,
+    old_vehicle_number VARCHAR(50),
+    new_vehicle_number VARCHAR(50) NOT NULL,
+    reason TEXT NOT NULL,
+    proof_document_url VARCHAR(255),
+    status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+    admin_notes TEXT,
+    requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TIMESTAMP NULL,
+    reviewed_by VARCHAR(36)
 );
 
--- Location History table
-CREATE TABLE location_history (
-  id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
-  entity_type ENUM('bus', 'driver', 'passenger') NOT NULL,
-  entity_id CHAR(36) NOT NULL,
-  latitude DECIMAL(10, 8) NOT NULL,
-  longitude DECIMAL(11, 8) NOT NULL,
-  address VARCHAR(255),
-  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_bus_requests_status ON bus_requests(RequestStatus);
-CREATE INDEX idx_location_history_entity ON location_history(entity_type, entity_id);
+CREATE INDEX idx_bus_requests_passenger_id ON bus_requests(passenger_id);
+CREATE INDEX idx_bus_requests_driver_id ON bus_requests(driver_id);
+CREATE INDEX idx_bus_requests_status ON bus_requests(request_status);
+CREATE INDEX idx_hot_spots_location ON hot_spots(latitude, longitude);
+CREATE INDEX idx_vehicle_change_requests_driver ON vehicle_change_requests(driver_id);

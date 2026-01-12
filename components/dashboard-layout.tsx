@@ -132,7 +132,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                       <p className="text-sm font-medium">{user?.fullName}</p>
                       <p className="text-xs text-muted-foreground">{user?.email}</p>
                       <Badge variant="secondary" className="w-fit mt-1">
-                        {user?.role}
+                        {user?.role === 'emergency_service' ? ((user as any).service_type || 'Emergency Service') : user?.role === 'towing_service' ? 'Towing Service' : user?.role}
                       </Badge>
                     </div>
                   </DropdownMenuLabel>

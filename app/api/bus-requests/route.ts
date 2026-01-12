@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     // Create bus request
     await query(
-      `INSERT INTO bus_requests (request_id, passenger_id, location, pickup_latitude, pickup_longitude, destination, passenger_count, is_peak_hour) 
+      `INSERT INTO bus_requests (id, passenger_id, location, pickup_latitude, pickup_longitude, destination, passenger_count, is_peak_hour) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [requestId, passengerId, location, latitude, longitude, destination, passengerCount || 1, isPeak]
     )
@@ -58,10 +58,11 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const driverId = searchParams.get('driverId')
+    const passengerId = searchParams.get('passengerId')
     const getHotSpots = searchParams.get('hotSpots')
+    const adminView = searchParams.get('adminView')
 
     if (getHotSpots === 'true') {
-      // Return hot spots for map
       const hotSpots = await query(
         `SELECT location, pickup_latitude as latitude, pickup_longitude as longitude, COUNT(*) as request_count
          FROM bus_requests 
@@ -74,8 +75,60 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ hotSpots })
     }
 
+    if (passengerId) {
+      console.log("Fetching requests for passenger ID:", passengerId)
+      // Get passenger's requests
+      const requests = await query(
+        `SELECT * FROM bus_requests WHERE passenger_id = ? ORDER BY request_time DESC`,
+        [passengerId]
+      )
+      
+      // Get acceptances for each request
+      for (const request of requests) {
+        const acceptances = await query(
+          `SELECT driver_name, driver_phone, bus_number, bus_capacity, accepted_at 
+           FROM bus_acceptances WHERE request_id = ?`,
+          [request.id]
+        )
+        request.acceptances = JSON.stringify(acceptances)
+      }
+      
+      console.log("Found requests:", requests.length)
+      return NextResponse.json({ requests })
+    }
+
+    if (adminView === 'true') {
+      console.log("Admin view requested")
+      // Get all requests
+      const requests = await query(
+        `SELECT * FROM bus_requests ORDER BY request_time DESC`
+      )
+      
+      console.log("Found bus requests:", requests.length)
+      
+      // Get passenger and acceptances for each request
+      for (const request of requests) {
+        // Get passenger info
+        const passenger = await query(
+          `SELECT full_name FROM passengers WHERE passenger_id = ?`,
+          [request.passenger_id]
+        )
+        request.passenger_name = passenger[0]?.full_name || 'Unknown'
+        
+        // Get acceptances
+        const acceptances = await query(
+          `SELECT driver_name, driver_phone, bus_number, bus_capacity, accepted_at 
+           FROM bus_acceptances WHERE request_id = ?`,
+          [request.id]
+        )
+        console.log(`Request ${request.id} has ${acceptances.length} acceptances`)
+        request.acceptances = JSON.stringify(acceptances)
+      }
+      
+      return NextResponse.json({ requests })
+    }
+
     if (driverId) {
-      // Return pending requests for driver
       const requests = await query(
         "SELECT * FROM bus_requests WHERE request_status = 'pending' ORDER BY is_peak_hour DESC, request_time ASC"
       )
@@ -92,18 +145,54 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
-    const { requestId, driverId, busId, action } = body
+    console.log("Received body:", body)
+    const { requestId, driverId, driverName, driverPhone, busNumber, busCapacity, action } = body
 
     if (!requestId || !action) {
+      console.log("Missing requestId or action")
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    if (action === 'accept' && driverId && busId) {
-      await query(
-        "UPDATE bus_requests SET request_status = 'assigned', driver_id = ?, bus_id = ? WHERE request_id = ?",
-        [driverId, busId, requestId]
+    if (action === 'accept') {
+      if (!driverId || !driverName || !driverPhone || !busNumber || !busCapacity) {
+        console.log("Missing fields:", { driverId, driverName, driverPhone, busNumber, busCapacity })
+        return NextResponse.json({ error: "Bus details required" }, { status: 400 })
+      }
+
+      // Get current request details
+      const requestData = await query(
+        "SELECT passenger_count, total_capacity_accepted FROM bus_requests WHERE id = ?",
+        [requestId]
       )
-      return NextResponse.json({ message: "Request accepted" })
+
+      if (!requestData[0]) {
+        return NextResponse.json({ error: "Request not found" }, { status: 404 })
+      }
+
+      const { passenger_count, total_capacity_accepted } = requestData[0]
+      const newTotalCapacity = (total_capacity_accepted || 0) + parseInt(busCapacity)
+
+      // Insert bus acceptance
+      const acceptanceId = uuidv4()
+      await query(
+        `INSERT INTO bus_acceptances (id, request_id, driver_id, driver_name, driver_phone, bus_number, bus_capacity) 
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [acceptanceId, requestId, driverId, driverName, driverPhone, busNumber, busCapacity]
+      )
+
+      // Update request capacity
+      const capacityFulfilled = newTotalCapacity >= passenger_count
+      await query(
+        `UPDATE bus_requests SET total_capacity_accepted = ?, capacity_fulfilled = ?, request_status = ? WHERE id = ?`,
+        [newTotalCapacity, capacityFulfilled, capacityFulfilled ? 'accepted' : 'pending', requestId]
+      )
+
+      return NextResponse.json({ 
+        message: capacityFulfilled ? "Request fully accepted" : "Partial acceptance recorded",
+        capacityFulfilled,
+        totalCapacity: newTotalCapacity,
+        requiredCapacity: passenger_count
+      })
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 })

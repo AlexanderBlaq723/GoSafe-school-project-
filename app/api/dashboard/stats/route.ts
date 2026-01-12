@@ -11,9 +11,9 @@ export async function GET(request: NextRequest) {
       // Admin stats
       const [totalReports] = await query("SELECT COUNT(*) as count FROM reports")
       const [totalUsers] = await query("SELECT COUNT(*) as count FROM users WHERE role != 'admin'")
-      const [pendingReports] = await query("SELECT COUNT(*) as count FROM reports WHERE status = 'sent'")
+      const [pendingReports] = await query("SELECT COUNT(*) as count FROM reports WHERE status = 'pending'")
       const [resolvedToday] = await query(
-        "SELECT COUNT(*) as count FROM reports WHERE status = 'handled' AND DATE(updated_at) = CURDATE()",
+        "SELECT COUNT(*) as count FROM reports WHERE status = 'resolved' AND DATE(updated_at) = CURDATE()",
       )
 
       return NextResponse.json({
@@ -26,15 +26,15 @@ export async function GET(request: NextRequest) {
       // User stats
       const [totalReports] = await query("SELECT COUNT(*) as count FROM reports WHERE user_id = ?", [userId])
       const [pendingReports] = await query(
-        "SELECT COUNT(*) as count FROM reports WHERE user_id = ? AND status = 'sent'",
+        "SELECT COUNT(*) as count FROM reports WHERE user_id = ? AND status = 'pending'",
         [userId],
       )
       const [reviewedReports] = await query(
-        "SELECT COUNT(*) as count FROM reports WHERE user_id = ? AND status = 'reviewed'",
+        "SELECT COUNT(*) as count FROM reports WHERE user_id = ? AND status = 'in_progress'",
         [userId],
       )
       const [handledReports] = await query(
-        "SELECT COUNT(*) as count FROM reports WHERE user_id = ? AND status = 'handled'",
+        "SELECT COUNT(*) as count FROM reports WHERE user_id = ? AND status = 'resolved'",
         [userId],
       )
 

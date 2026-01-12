@@ -25,6 +25,8 @@ export default function ReportPage() {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [location, setLocation] = useState("")
+  const [latitude, setLatitude] = useState<number | null>(null)
+  const [longitude, setLongitude] = useState<number | null>(null)
   const [priority, setPriority] = useState("medium")
   const [reportedDriverLicense, setReportedDriverLicense] = useState("")
   const [reportedVehicleNumber, setReportedVehicleNumber] = useState("")
@@ -49,11 +51,7 @@ export default function ReportPage() {
       return
     }
 
-    const driverMisconductTypes = ["reckless_driving", "overloading", "driver_misconduct", "overcharging"]
-    if (driverMisconductTypes.includes(type) && (!reportedDriverLicense || !reportedVehicleNumber)) {
-      setError("Driver license and vehicle number are required for driver misconduct reports")
-      return
-    }
+    // No validation for driver details - they are optional
 
     setIsSubmitting(true)
 
@@ -71,8 +69,9 @@ export default function ReportPage() {
           title,
           description,
           location,
+          latitude,
+          longitude,
           priority,
-          driverLicenseNumber: reportedDriverLicense || null,
           vehicleNumber: reportedVehicleNumber || null,
           requestTowing: requiresTowing,
           requestEmergency: requiresEmergency,
@@ -143,7 +142,7 @@ export default function ReportPage() {
                       <SelectItem value="overloading">Vehicle Overloading</SelectItem>
                       <SelectItem value="driver_misconduct">Driver Misconduct/Maltreatment</SelectItem>
                       <SelectItem value="overcharging">Overcharging</SelectItem>
-                      {user?.role === "driver" && <SelectItem value="vehicle_breakdown">Vehicle Breakdown</SelectItem>}
+                      <SelectItem value="vehicle_breakdown">Vehicle Breakdown</SelectItem>
                       <SelectItem value="pothole">Pothole/Damaged Road</SelectItem>
                       <SelectItem value="streetlight_needed">Streetlight Needed</SelectItem>
                       <SelectItem value="accident">Traffic Accident</SelectItem>
@@ -182,21 +181,10 @@ export default function ReportPage() {
                 {needsDriverDetails && (
                   <>
                     <div className="space-y-2">
-                      <Label htmlFor="reportedDriverLicense">Driver License Number *</Label>
-                      <Input
-                        id="reportedDriverLicense"
-                        placeholder="DL-2023-XXXXXX"
-                        value={reportedDriverLicense}
-                        onChange={(e) => setReportedDriverLicense(e.target.value)}
-                        disabled={isSubmitting}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="reportedVehicleNumber">Vehicle Number *</Label>
+                      <Label htmlFor="reportedVehicleNumber">Vehicle Number (Optional)</Label>
                       <Input
                         id="reportedVehicleNumber"
-                        placeholder="GT-XXXX-XX"
+                        placeholder="GT-XXXX-XX (if known)"
                         value={reportedVehicleNumber}
                         onChange={(e) => setReportedVehicleNumber(e.target.value)}
                         disabled={isSubmitting}
@@ -214,6 +202,32 @@ export default function ReportPage() {
                     onChange={(e) => setLocation(e.target.value)}
                     disabled={isSubmitting}
                   />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(
+                          (position) => {
+                            setLatitude(position.coords.latitude)
+                            setLongitude(position.coords.longitude)
+                            alert('Location captured successfully')
+                          },
+                          (error) => {
+                            alert('Failed to get location. Please enable location services.')
+                          }
+                        )
+                      } else {
+                        alert('Geolocation is not supported by your browser')
+                      }
+                    }}
+                  >
+                    Get Current Location
+                  </Button>
+                  {latitude && longitude && (
+                    <p className="text-xs text-green-600">Location captured: {latitude.toFixed(4)}, {longitude.toFixed(4)}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
@@ -26,6 +26,14 @@ export default function SignupPage() {
   const [licenseNumber, setLicenseNumber] = useState("")
   const [vehicleNumber, setVehicleNumber] = useState("")
   const [transportCompany, setTransportCompany] = useState("")
+  const [dvlaOffices, setDvlaOffices] = useState<Array<any>>([])
+  const [dvlaOfficeId, setDvlaOfficeId] = useState<string | undefined>(undefined)
+  const [officeNumber, setOfficeNumber] = useState("")
+  const [branchLocation, setBranchLocation] = useState("")
+  const [serviceType, setServiceType] = useState<string | undefined>(undefined)
+  const [branchNumber, setBranchNumber] = useState("")
+  const [registrationNumber, setRegistrationNumber] = useState("")
+  const [companyName, setCompanyName] = useState("")
   const [error, setError] = useState("")
   const { signup, isLoading } = useAuth()
   const router = useRouter()
@@ -44,6 +52,16 @@ export default function SignupPage() {
       return
     }
 
+    if (role === "admin" && (!dvlaOfficeId || !officeNumber || !branchLocation)) {
+      setError("DVLA office, office number and branch location are required for admin registration")
+      return
+    }
+
+    if ((role === 'towing_service') && !companyName) {
+      setError('Company name is required for towing services')
+      return
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords do not match")
       return
@@ -55,12 +73,46 @@ export default function SignupPage() {
     }
 
     try {
-      await signup(email, password, fullName, role, phoneNumber, licenseNumber, vehicleNumber, transportCompany)
+      const result = await signup(
+        email,
+        password,
+        fullName,
+        role,
+        phoneNumber,
+        licenseNumber,
+        vehicleNumber,
+        transportCompany,
+        companyName,
+        dvlaOfficeId,
+        officeNumber,
+        branchLocation,
+        serviceType,
+        branchNumber,
+        registrationNumber,
+      )
+
+      if (result?.requiresApproval) {
+        const msg = result.message || 'Registration submitted. Awaiting approval.'
+        const special = result.specialId ? `Your GoSafe ID: ${result.specialId}` : ''
+        alert(`${msg}\n${special}`)
+        router.push('/login')
+        return
+      }
+
       router.push(role === "admin" ? "/admin" : "/dashboard")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create account")
     }
   }
+
+  useEffect(() => {
+    if (role === 'admin') {
+      fetch('/api/dvla-offices')
+        .then((r) => r.json())
+        .then((d) => setDvlaOffices(d.offices || []))
+        .catch(() => setDvlaOffices([]))
+    }
+  }, [role])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -183,6 +235,82 @@ export default function SignupPage() {
                     onChange={(e) => setTransportCompany(e.target.value)}
                     disabled={isLoading}
                   />
+                </div>
+              </>
+            )}
+
+            {role === "admin" && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="dvlaOffice">DVLA Office</Label>
+                  <Select value={dvlaOfficeId} onValueChange={(v: any) => setDvlaOfficeId(v)}>
+                    <SelectTrigger id="dvlaOffice">
+                      <SelectValue placeholder="Select DVLA office" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dvlaOffices.map((o) => (
+                        <SelectItem key={o.id} value={o.id}>{`${o.office_name} — ${o.region}`}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="officeNumber">Office Number</Label>
+                  <Input id="officeNumber" type="text" placeholder="Office number" value={officeNumber} onChange={(e) => setOfficeNumber(e.target.value)} />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="branchLocation">Branch Location</Label>
+                  <Input id="branchLocation" type="text" placeholder="Branch location" value={branchLocation} onChange={(e) => setBranchLocation(e.target.value)} />
+                </div>
+              </>
+            )}
+
+            {role === 'emergency_service' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="serviceType">Service Type</Label>
+                  <Select value={serviceType} onValueChange={(v: any) => setServiceType(v)}>
+                    <SelectTrigger id="serviceType">
+                      <SelectValue placeholder="Select service type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ambulance">Ambulance</SelectItem>
+                      <SelectItem value="fire">Fire</SelectItem>
+                      <SelectItem value="police">Police</SelectItem>
+                      <SelectItem value="rescue">Rescue</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="registrationNumber">Registration Number</Label>
+                  <Input id="registrationNumber" value={registrationNumber} onChange={(e) => setRegistrationNumber(e.target.value)} />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="branchNumber">Branch Number (optional)</Label>
+                  <Input id="branchNumber" value={branchNumber} onChange={(e) => setBranchNumber(e.target.value)} />
+                </div>
+              </>
+            )}
+
+            {role === 'towing_service' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="companyName">Company Name</Label>
+                  <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="registrationNumber">Registration Number</Label>
+                  <Input id="registrationNumber" value={registrationNumber} onChange={(e) => setRegistrationNumber(e.target.value)} />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="branchNumber">Branch Number (optional)</Label>
+                  <Input id="branchNumber" value={branchNumber} onChange={(e) => setBranchNumber(e.target.value)} />
                 </div>
               </>
             )}

@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("")
+  const [identifier, setIdentifier] = useState("")
   const [password, setPassword] = useState("")
   const [role, setRole] = useState<"passenger" | "driver" | "admin" | "towing_service" | "emergency_service">(
     "passenger",
@@ -29,7 +29,7 @@ export default function LoginPage() {
     e.preventDefault()
     setError("")
 
-    if (!email || !password) {
+    if (!identifier || !password) {
       setError("Please fill in all fields")
       return
     }
@@ -40,7 +40,7 @@ export default function LoginPage() {
     }
 
     try {
-      await login(email, password, role, licenseNumber)
+      await login(identifier, password, role, licenseNumber)
       router.push(role === "admin" ? "/admin" : "/dashboard")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invalid credentials")
@@ -92,13 +92,13 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="identifier">Email / Phone / GoSafe ID</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="identifier"
+                type="text"
+                placeholder="you@example.com or 024XXXXXXX or GSAFE-xxxx"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 disabled={isLoading}
               />
             </div>
@@ -141,6 +141,11 @@ export default function LoginPage() {
               <Link href="/signup" className="text-blue-600 hover:underline">
                 Sign up
               </Link>
+              <div className="mt-2">
+                <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
             </div>
           </form>
         </CardContent>

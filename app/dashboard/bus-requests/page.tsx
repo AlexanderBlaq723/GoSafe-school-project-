@@ -43,25 +43,48 @@ export default function BusRequestsPage() {
   }
 
   const acceptRequest = async (requestId: string) => {
+    const busNumber = prompt("Enter Bus Number:")
+    if (!busNumber) return
+
+    const busCapacity = prompt("Enter Bus Capacity:")
+    if (!busCapacity || isNaN(parseInt(busCapacity))) {
+      alert("Invalid capacity")
+      return
+    }
+
+    const driverPhone = prompt("Enter Your Phone Number:")
+    if (!driverPhone) return
+
+    const payload = {
+      requestId,
+      driverId: user?.id,
+      driverName: user?.fullName,
+      driverPhone,
+      busNumber,
+      busCapacity: parseInt(busCapacity),
+      action: "accept"
+    }
+
+    console.log("Sending payload:", payload)
+
     try {
       const response = await fetch("/api/bus-requests", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          requestId,
-          driverId: user?.id,
-          busId: "bus-123", // You'd get this from driver's assigned bus
-          action: "accept"
-        })
+        body: JSON.stringify(payload)
       })
 
+      const data = await response.json()
+      console.log("Response:", data)
+
       if (response.ok) {
-        alert("Request accepted!")
+        alert(data.message + `\nCapacity: ${data.totalCapacity}/${data.requiredCapacity}`)
         fetchRequests()
       } else {
-        alert("Failed to accept request")
+        alert(data.error || "Failed to accept request")
       }
     } catch (error) {
+      console.error("Error:", error)
       alert("Error accepting request")
     }
   }
@@ -124,7 +147,7 @@ export default function BusRequestsPage() {
               ) : (
                 <div className="space-y-4">
                   {requests.map((request) => (
-                    <div key={request.request_id} className="border rounded-lg p-4 space-y-3">
+                    <div key={request.id} className="border rounded-lg p-4 space-y-3">
                       <div className="flex items-start justify-between">
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
@@ -145,7 +168,12 @@ export default function BusRequestsPage() {
                           <div className="flex items-center gap-4 text-sm text-gray-500">
                             <div className="flex items-center gap-1">
                               <Users className="h-4 w-4" />
-                              <span>{request.passenger_count} passenger(s)</span>
+                              <span>{request.passenger_count} needed</span>
+                              {request.total_capacity_accepted > 0 && (
+                                <span className="text-green-600 font-medium">
+                                  ({request.total_capacity_accepted} accepted)
+                                </span>
+                              )}
                             </div>
                             <div className="flex items-center gap-1">
                               <Clock className="h-4 w-4" />
@@ -155,7 +183,7 @@ export default function BusRequestsPage() {
                         </div>
                         
                         <Button 
-                          onClick={() => acceptRequest(request.request_id)}
+                          onClick={() => acceptRequest(request.id)}
                           size="sm"
                         >
                           Accept

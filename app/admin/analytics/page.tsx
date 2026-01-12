@@ -1,8 +1,11 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { ProtectedRoute } from "@/components/protected-route"
 import { AdminLayout } from "@/components/admin-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Bar,
@@ -21,38 +24,38 @@ import {
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 
 export default function AnalyticsPage() {
-  // Mock data for charts
-  const statusData = [
-    { name: "Handled", value: 45, fill: "#22c55e" },
-    { name: "Reviewed", value: 32, fill: "#f97316" },
-    { name: "Sent", value: 23, fill: "#3b82f6" },
-  ]
+  const [reportType, setReportType] = useState('all')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [analytics, setAnalytics] = useState<any[]>([])
+  const [summary, setSummary] = useState<any>({})
+  const [loading, setLoading] = useState(true)
 
-  const monthlyData = [
-    { month: "Jan", handled: 40, notHandled: 24 },
-    { month: "Feb", handled: 52, notHandled: 18 },
-    { month: "Mar", handled: 48, notHandled: 22 },
-    { month: "Apr", handled: 61, notHandled: 15 },
-    { month: "May", handled: 55, notHandled: 28 },
-    { month: "Jun", handled: 67, notHandled: 19 },
-  ]
+  useEffect(() => {
+    fetchAnalytics()
+  }, [reportType, startDate, endDate])
 
-  const reportTypeData = [
-    { type: "Pothole", count: 45 },
-    { type: "Street Light", count: 32 },
-    { type: "Emergency", count: 12 },
-    { type: "Other", count: 23 },
-  ]
-
-  const responseTimeData = [
-    { day: "Mon", avgTime: 4.2 },
-    { day: "Tue", avgTime: 3.8 },
-    { day: "Wed", avgTime: 5.1 },
-    { day: "Thu", avgTime: 3.5 },
-    { day: "Fri", avgTime: 4.7 },
-    { day: "Sat", avgTime: 6.2 },
-    { day: "Sun", avgTime: 5.8 },
-  ]
+  const fetchAnalytics = async () => {
+    try {
+      let url = `/api/analytics?reportType=${reportType}`
+      if (startDate && endDate) {
+        url += `&startDate=${startDate}&endDate=${endDate}`
+      }
+      const response = await fetch(url)
+      if (!response.ok) {
+        console.error('Analytics API error:', response.status)
+        setLoading(false)
+        return
+      }
+      const data = await response.json()
+      setAnalytics(data.analytics || [])
+      setSummary(data.summary || {})
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <ProtectedRoute allowedRoles={["admin"]}>
@@ -63,6 +66,80 @@ export default function AnalyticsPage() {
             <p className="text-gray-600 mt-1">Comprehensive insights into report data and system performance.</p>
           </div>
 
+          <Card>
+            <CardHeader>
+              <CardTitle>Filters</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Report Type</label>
+                  <Select value={reportType} onValueChange={setReportType}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="reckless_driving">Reckless Driving</SelectItem>
+                      <SelectItem value="overloading">Vehicle Overloading</SelectItem>
+                      <SelectItem value="driver_misconduct">Driver Misconduct</SelectItem>
+                      <SelectItem value="overcharging">Overcharging</SelectItem>
+                      <SelectItem value="vehicle_breakdown">Vehicle Breakdown</SelectItem>
+                      <SelectItem value="pothole">Pothole/Damaged Road</SelectItem>
+                      <SelectItem value="streetlight_needed">Streetlight Needed</SelectItem>
+                      <SelectItem value="accident">Traffic Accident</SelectItem>
+                      <SelectItem value="emergency">Emergency</SelectItem>
+                      <SelectItem value="other">Other Safety Issue</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Start Date</label>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">End Date</label>
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-2xl font-bold">{summary.total || 0}</div>
+                <p className="text-sm text-gray-600">Total Reports</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-2xl font-bold text-green-600">{summary.resolved || 0}</div>
+                <p className="text-sm text-gray-600">Resolved</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-2xl font-bold text-yellow-600">{summary.pending || 0}</div>
+                <p className="text-sm text-gray-600">Pending</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-2xl font-bold text-blue-600">{summary.avg_resolution_hours ? Number(summary.avg_resolution_hours).toFixed(1) : 0}h</div>
+                <p className="text-sm text-gray-600">Avg Resolution Time</p>
+              </CardContent>
+            </Card>
+          </div>
+
           <Tabs defaultValue="overview" className="space-y-6">
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -71,124 +148,98 @@ export default function AnalyticsPage() {
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {loading ? (
+                <div className="text-center py-8">Loading...</div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Reports by Type</CardTitle>
+                      <CardDescription>Breakdown of report categories</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ChartContainer
+                        config={{
+                          count: { label: "Reports", color: "#3b82f6" },
+                        }}
+                        className="h-[300px]"
+                      >
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={analytics}>
+                            <XAxis dataKey="incident_type" />
+                            <YAxis />
+                            <ChartTooltip content={<ChartTooltipContent />} />
+                            <Bar dataKey="count" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="trends" className="space-y-6">
+              {loading ? (
+                <div className="text-center py-8">Loading...</div>
+              ) : (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Report Status Distribution</CardTitle>
-                    <CardDescription>Current status of all reports in the system</CardDescription>
+                    <CardTitle>Report Trends</CardTitle>
+                    <CardDescription>Report volume over selected period</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <ChartContainer
                       config={{
-                        handled: { label: "Handled", color: "#22c55e" },
-                        reviewed: { label: "Reviewed", color: "#f97316" },
-                        sent: { label: "Sent", color: "#3b82f6" },
+                        count: { label: "Reports", color: "#22c55e" },
                       }}
-                      className="h-[300px]"
+                      className="h-[400px]"
                     >
                       <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={statusData}
-                            dataKey="value"
-                            nameKey="name"
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={80}
-                            label
-                          >
-                            {statusData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.fill} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
+                        <LineChart data={analytics}>
+                          <XAxis dataKey="period" />
+                          <YAxis />
+                          <ChartTooltip content={<ChartTooltipContent />} />
                           <Legend />
-                        </PieChart>
+                          <Line type="monotone" dataKey="count" stroke="#22c55e" strokeWidth={2} dot={{ r: 4 }} />
+                        </LineChart>
                       </ResponsiveContainer>
                     </ChartContainer>
                   </CardContent>
                 </Card>
+              )}
+            </TabsContent>
 
+            <TabsContent value="performance" className="space-y-6">
+              {loading ? (
+                <div className="text-center py-8">Loading...</div>
+              ) : (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Reports by Type</CardTitle>
+                    <CardTitle>Report Type Distribution</CardTitle>
                     <CardDescription>Breakdown of report categories</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <ChartContainer
                       config={{
-                        count: { label: "Reports", color: "#3b82f6" },
+                        resolved: { label: "Resolved", color: "#22c55e" },
+                        pending: { label: "Pending", color: "#f97316" },
                       }}
-                      className="h-[300px]"
+                      className="h-[400px]"
                     >
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={reportTypeData}>
-                          <XAxis dataKey="type" />
+                        <BarChart data={analytics}>
+                          <XAxis dataKey="incident_type" />
                           <YAxis />
                           <ChartTooltip content={<ChartTooltipContent />} />
+                          <Legend />
                           <Bar dataKey="count" fill="#3b82f6" radius={[8, 8, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </ChartContainer>
                   </CardContent>
                 </Card>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="trends" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Monthly Report Trends</CardTitle>
-                  <CardDescription>Comparison of handled vs not handled reports over time</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ChartContainer
-                    config={{
-                      handled: { label: "Handled", color: "#22c55e" },
-                      notHandled: { label: "Not Handled", color: "#ef4444" },
-                    }}
-                    className="h-[400px]"
-                  >
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={monthlyData}>
-                        <XAxis dataKey="month" />
-                        <YAxis />
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Legend />
-                        <Bar dataKey="handled" fill="#22c55e" radius={[8, 8, 0, 0]} />
-                        <Bar dataKey="notHandled" fill="#ef4444" radius={[8, 8, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="performance" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Average Response Time</CardTitle>
-                  <CardDescription>Average time (in hours) to address reports by day of week</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ChartContainer
-                    config={{
-                      avgTime: { label: "Avg Response Time (hours)", color: "#8b5cf6" },
-                    }}
-                    className="h-[400px]"
-                  >
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={responseTimeData}>
-                        <XAxis dataKey="day" />
-                        <YAxis />
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Legend />
-                        <Line type="monotone" dataKey="avgTime" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 4 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                </CardContent>
-              </Card>
+              )}
             </TabsContent>
           </Tabs>
         </div>

@@ -8,30 +8,18 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get("userId")
     const role = searchParams.get("role")
 
-    let sql = `
-      SELECT r.*, u.full_name as reporter_name, u.email as reporter_email
-      FROM reports r
-      LEFT JOIN users u ON r.user_id = u.id
-      ORDER BY r.created_at DESC
-    `
+    let sql = `SELECT * FROM reports ORDER BY created_at DESC`
     let params: any[] = []
 
-    // Filter by user for non-admin roles
     if (role !== "admin" && userId) {
-      sql = `
-        SELECT r.*, u.full_name as reporter_name, u.email as reporter_email
-        FROM reports r
-        LEFT JOIN users u ON r.user_id = u.id
-        WHERE r.user_id = ?
-        ORDER BY r.created_at DESC
-      `
+      sql = `SELECT * FROM reports WHERE user_id = ? ORDER BY created_at DESC`
       params = [userId]
     }
 
     const reports = await query(sql, params)
     return NextResponse.json({ reports }, { status: 200 })
   } catch (error) {
-    console.error("[v0] Get reports error:", error)
+    console.error("Get reports error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -48,48 +36,126 @@ export async function POST(request: NextRequest) {
       latitude,
       longitude,
       priority,
-      driverLicenseNumber,
       vehicleNumber,
-      busNumber,
       requestTowing,
       requestEmergency,
-      imageUrl,
+      imageUrls,
+      videoUrls
     } = body
 
     if (!userId || !type || !title || !description || !location) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    const reportId = uuidv4()
+    // Generate report ID in format RPT-YYYY-0000000001 (sequential)
+    const year = new Date().getFullYear()
+    
+    // Get the count of reports for this year to generate sequential number
+    const [countResult] = await query<any[]>(
+      "SELECT COUNT(*) as count FROM reports WHERE id LIKE ?",
+      [`RPT-${year}-%`]
+    )
+    const nextNumber = (countResult.count + 1).toString().padStart(10, '0')
+    const reportId = `RPT-${year}-${nextNumber}`
     await query(
       `INSERT INTO reports (
-        id, user_id, type, title, description, location, latitude, longitude, 
-        priority, driver_license_number, vehicle_number, bus_number, 
-        request_towing, request_emergency, image_url, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'sent', NOW())`,
+        id, user_id, incident_type, description, location, latitude, longitude, 
+        severity, image_urls, video_urls, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
       [
         reportId,
         userId,
         type,
-        title,
         description,
         location,
         latitude || null,
         longitude || null,
         priority || "medium",
-        driverLicenseNumber || null,
-        vehicleNumber || null,
-        busNumber || null,
-        requestTowing || false,
-        requestEmergency || false,
-        imageUrl || null,
-      ],
+        imageUrls ? JSON.stringify(imageUrls) : null,
+        videoUrls ? JSON.stringify(videoUrls) : null
+      ]
     )
+
+    // Auto-assign emergency services for serious incidents
+    const needsEmergencyServices = 
+      type === 'accident' || 
+      type === 'emergency' || 
+      priority === 'critical' || 
+      priority === 'high' ||
+      requestEmergency ||
+      requestTowing
+
+    if (needsEmergencyServices && latitude && longitude) {
+      const serviceTypes = []
+      
+      if (type === 'accident' || type === 'emergency' || requestEmergency) {
+        serviceTypes.push('police', 'ambulance')
+      }
+      
+      if (type === 'vehicle_breakdown' || requestTowing) {
+        serviceTypes.push('towing')
+      }
+      
+      if (type === 'emergency' && priority === 'critical') {
+        serviceTypes.push('fire')
+      }
+
+      if (serviceTypes.length > 0) {
+        try {
+          await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/emergency-services`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              reportId,
+              serviceTypes,
+              latitude,
+              longitude
+            })
+          })
+        } catch (error) {
+          console.error('Failed to auto-assign emergency services:', error)
+        }
+      }
+    }
+
+    // Update driver report count if vehicle number is provided
+    if (vehicleNumber && ['reckless_driving', 'overloading', 'driver_misconduct', 'overcharging'].includes(type)) {
+      try {
+        await query(
+          'UPDATE users SET reported_count = reported_count + 1, is_flagged = CASE WHEN reported_count >= 2 THEN true ELSE is_flagged END WHERE vehicle_number = ? AND role = "driver"',
+          [vehicleNumber]
+        )
+      } catch (error) {
+        console.error('Failed to update driver report count:', error)
+      }
+    }
+
+    // Route report to nearest DVLA office admin if location provided
+    if (latitude && longitude) {
+      try {
+        const offices = await query<any[]>(
+          `SELECT id, office_name, latitude, longitude,
+           (6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance
+           FROM dvla_offices WHERE is_active = true
+           ORDER BY distance LIMIT 1`,
+          [latitude, longitude, latitude]
+        )
+        
+        if (offices.length > 0) {
+          await query(
+            'UPDATE reports SET assigned_dvla_office = ? WHERE id = ?',
+            [offices[0].id, reportId]
+          )
+        }
+      } catch (error) {
+        console.error('Failed to assign DVLA office:', error)
+      }
+    }
 
     const [report] = await query("SELECT * FROM reports WHERE id = ?", [reportId])
     return NextResponse.json({ report }, { status: 201 })
   } catch (error) {
-    console.error("[v0] Create report error:", error)
+    console.error("Create report error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

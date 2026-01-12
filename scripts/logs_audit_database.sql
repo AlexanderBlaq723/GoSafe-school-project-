@@ -1,71 +1,42 @@
--- Logs & Audit Database Schema
+CREATE DATABASE IF NOT EXISTS logs_audit_database;
+USE logs_audit_database;
 
--- User Activity Logs
-CREATE TABLE user_activity_logs (
-  id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
-  user_id CHAR(36),
-  user_type ENUM('passenger', 'driver', 'admin') NOT NULL,
-  action VARCHAR(255) NOT NULL,
-  details JSON,
-  ip_address VARCHAR(45),
-  user_agent TEXT,
-  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS activity_logs (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36),
+    action VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(50),
+    entity_id VARCHAR(36),
+    details JSON,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- API Access Logs
-CREATE TABLE api_logs (
-  id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
-  endpoint VARCHAR(255) NOT NULL,
-  method VARCHAR(10) NOT NULL,
-  response_time INT,
-  status_code INT,
-  ip_address VARCHAR(45),
-  user_id CHAR(36),
-  request_body TEXT,
-  response_body TEXT,
-  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS audit_trail (
+    id VARCHAR(36) PRIMARY KEY,
+    table_name VARCHAR(100) NOT NULL,
+    record_id VARCHAR(36) NOT NULL,
+    action ENUM('INSERT', 'UPDATE', 'DELETE') NOT NULL,
+    old_values JSON,
+    new_values JSON,
+    changed_by VARCHAR(36),
+    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- System Logs
-CREATE TABLE system_logs (
-  id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
-  log_level ENUM('info', 'warning', 'error', 'critical') NOT NULL,
-  service VARCHAR(100) NOT NULL,
-  message TEXT NOT NULL,
-  stack_trace TEXT,
-  metadata JSON,
-  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS system_logs (
+    id VARCHAR(36) PRIMARY KEY,
+    log_level ENUM('INFO', 'WARNING', 'ERROR', 'CRITICAL') NOT NULL,
+    module VARCHAR(100),
+    message TEXT NOT NULL,
+    stack_trace TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Security Logs
-CREATE TABLE security_logs (
-  id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
-  event_type ENUM('login_attempt', 'login_success', 'login_failure', 'logout', 'password_change', 'account_locked') NOT NULL,
-  user_id CHAR(36),
-  ip_address VARCHAR(45),
-  user_agent TEXT,
-  success BOOLEAN,
-  failure_reason VARCHAR(255),
-  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Performance Metrics
-CREATE TABLE performance_metrics (
-  id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
-  metric_name VARCHAR(100) NOT NULL,
-  metric_value DECIMAL(10, 4) NOT NULL,
-  unit VARCHAR(20),
-  tags JSON,
-  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_user_activity_logs_user ON user_activity_logs(user_id);
-CREATE INDEX idx_user_activity_logs_timestamp ON user_activity_logs(timestamp DESC);
-CREATE INDEX idx_api_logs_endpoint ON api_logs(endpoint);
-CREATE INDEX idx_api_logs_timestamp ON api_logs(timestamp DESC);
+CREATE INDEX idx_activity_logs_user_id ON activity_logs(user_id);
+CREATE INDEX idx_activity_logs_action ON activity_logs(action);
+CREATE INDEX idx_activity_logs_created_at ON activity_logs(created_at);
+CREATE INDEX idx_audit_trail_table_record ON audit_trail(table_name, record_id);
+CREATE INDEX idx_audit_trail_changed_by ON audit_trail(changed_by);
 CREATE INDEX idx_system_logs_level ON system_logs(log_level);
-CREATE INDEX idx_system_logs_timestamp ON system_logs(timestamp DESC);
-CREATE INDEX idx_security_logs_event ON security_logs(event_type);
-CREATE INDEX idx_security_logs_timestamp ON security_logs(timestamp DESC);
-CREATE INDEX idx_performance_metrics_name ON performance_metrics(metric_name);
-CREATE INDEX idx_performance_metrics_timestamp ON performance_metrics(timestamp DESC);
+CREATE INDEX idx_system_logs_created_at ON system_logs(created_at);

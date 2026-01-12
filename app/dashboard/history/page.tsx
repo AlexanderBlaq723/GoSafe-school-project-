@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ProtectedRoute } from "@/components/protected-route"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,67 +9,42 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Calendar, MapPin } from "lucide-react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAuth } from "@/lib/auth-context"
+import Link from "next/link"
 
 export default function ReportHistoryPage() {
+  const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [reports, setReports] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // Mock data
-  const reports = [
-    {
-      id: "RPT-001",
-      title: "Large pothole on Main Street",
-      type: "pothole",
-      location: "Main Street & 5th Avenue",
-      description: "There is a dangerous pothole near the intersection that needs immediate attention.",
-      status: "reviewed",
-      priority: "high",
-      date: "2024-01-03",
-      time: "10:30 AM",
-      updates: [
-        { status: "sent", date: "2024-01-03", message: "Report submitted successfully" },
-        { status: "reviewed", date: "2024-01-04", message: "Report under review by maintenance team" },
-      ],
-    },
-    {
-      id: "RPT-002",
-      title: "Broken street light",
-      type: "street_light",
-      location: "123 Park Avenue",
-      description: "Street light has been out for 3 days, making the area unsafe at night.",
-      status: "sent",
-      priority: "medium",
-      date: "2024-01-04",
-      time: "2:15 PM",
-      updates: [{ status: "sent", date: "2024-01-04", message: "Report submitted successfully" }],
-    },
-    {
-      id: "RPT-003",
-      title: "Accident on Highway 101",
-      type: "emergency",
-      location: "Highway 101 Mile 45",
-      description: "Multi-vehicle accident blocking two lanes, emergency services needed.",
-      status: "handled",
-      priority: "critical",
-      date: "2024-01-02",
-      time: "8:45 AM",
-      updates: [
-        { status: "sent", date: "2024-01-02", message: "Report submitted successfully" },
-        { status: "reviewed", date: "2024-01-02", message: "Emergency services dispatched" },
-        { status: "handled", date: "2024-01-02", message: "Situation resolved, lanes cleared" },
-      ],
-    },
-  ]
+  useEffect(() => {
+    const fetchReports = async () => {
+      if (!user) return
+      try {
+        const response = await fetch(`/api/reports?userId=${user.id}&role=${user.role}`)
+        const data = await response.json()
+        setReports(data.reports || [])
+      } catch (error) {
+        console.error('Failed to fetch reports:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchReports()
+  }, [user])
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "sent":
+      case "pending":
+        return "bg-yellow-100 text-yellow-800"
+      case "in_progress":
         return "bg-blue-100 text-blue-800"
-      case "reviewed":
-        return "bg-orange-100 text-orange-800"
-      case "handled":
+      case "resolved":
         return "bg-green-100 text-green-800"
+      case "closed":
+        return "bg-gray-100 text-gray-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
@@ -88,7 +63,21 @@ export default function ReportHistoryPage() {
     }
   }
 
-  const filteredReports = statusFilter === "all" ? reports : reports.filter((report) => report.status === statusFilter)
+  const filteredReports = reports.filter((report) => {
+    const matchesStatus = statusFilter === "all" || report.status === statusFilter
+    const matchesSearch = !searchQuery || 
+      report.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      report.location?.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesStatus && matchesSearch
+  })
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString()
+  }
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString()
+  }
 
   return (
     <ProtectedRoute allowedRoles={["driver", "passenger"]}>
@@ -118,9 +107,10 @@ export default function ReportHistoryPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="sent">Sent</SelectItem>
-                    <SelectItem value="reviewed">Reviewed</SelectItem>
-                    <SelectItem value="handled">Handled</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -129,77 +119,60 @@ export default function ReportHistoryPage() {
 
           {/* Reports List */}
           <div className="space-y-4">
-            {filteredReports.map((report) => (
-              <Card key={report.id}>
-                <CardHeader>
-                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                    <div className="space-y-2 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <CardTitle className="text-xl">{report.title}</CardTitle>
-                        <Badge className={getStatusColor(report.status)}>{report.status}</Badge>
-                        <Badge className={getPriorityColor(report.priority)}>{report.priority}</Badge>
-                      </div>
-                      <CardDescription className="flex flex-col gap-1">
-                        <span className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4" />
-                          {report.location}
-                        </span>
-                        <span className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          {report.date} at {report.time}
-                        </span>
-                      </CardDescription>
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {report.id}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <Tabs defaultValue="details" className="w-full">
-                    <TabsList>
-                      <TabsTrigger value="details">Details</TabsTrigger>
-                      <TabsTrigger value="updates">Updates ({report.updates.length})</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="details" className="space-y-4 mt-4">
-                      <div>
-                        <h4 className="font-medium mb-2">Description</h4>
-                        <p className="text-sm text-gray-600">{report.description}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
-                          View on Map
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          Contact Support
-                        </Button>
-                      </div>
-                    </TabsContent>
-                    <TabsContent value="updates" className="mt-4">
-                      <div className="space-y-3">
-                        {report.updates.map((update, index) => (
-                          <div key={index} className="flex gap-3 pb-3 border-b last:border-0">
-                            <div className="flex flex-col items-center">
-                              <div className="h-3 w-3 rounded-full bg-blue-600 mt-1" />
-                              {index !== report.updates.length - 1 && <div className="w-0.5 h-full bg-gray-200 mt-1" />}
-                            </div>
-                            <div className="flex-1 space-y-1">
-                              <div className="flex items-center gap-2">
-                                <Badge className={getStatusColor(update.status)} variant="outline">
-                                  {update.status}
-                                </Badge>
-                                <span className="text-xs text-gray-500">{update.date}</span>
-                              </div>
-                              <p className="text-sm text-gray-600">{update.message}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </TabsContent>
-                  </Tabs>
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading reports...</p>
+              </div>
+            ) : filteredReports.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-gray-600">No reports found</p>
                 </CardContent>
               </Card>
-            ))}
+            ) : (
+              filteredReports.map((report) => (
+                <Card key={report.id}>
+                  <CardHeader>
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <CardTitle className="text-xl">{report.description}</CardTitle>
+                          <Badge className={getStatusColor(report.status)}>{report.status}</Badge>
+                          <Badge className={getPriorityColor(report.severity)}>{report.severity}</Badge>
+                        </div>
+                        <CardDescription className="flex flex-col gap-1">
+                          <span className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4" />
+                            {report.location}
+                          </span>
+                          <span className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            {formatDate(report.created_at)} at {formatTime(report.created_at)}
+                          </span>
+                        </CardDescription>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        {report.incident_type}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium mb-2">Location Details</h4>
+                        <p className="text-sm text-gray-600">{report.location}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/dashboard/reports/${report.id}`}>View Details</Link>
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </div>
       </DashboardLayout>

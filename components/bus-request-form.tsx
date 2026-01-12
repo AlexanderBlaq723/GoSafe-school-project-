@@ -91,9 +91,8 @@ export default function BusRequestForm() {
               id="passengerCount"
               type="number"
               min="1"
-              max="10"
               value={formData.passengerCount}
-              onChange={(e) => setFormData({...formData, passengerCount: parseInt(e.target.value)})}
+              onChange={(e) => setFormData({...formData, passengerCount: parseInt(e.target.value) || 1})}
             />
           </div>
           

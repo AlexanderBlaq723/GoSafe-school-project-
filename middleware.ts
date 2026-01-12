@@ -15,20 +15,6 @@ const securityHeaders = {
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>()
 
 function rateLimit(ip: string, limit: number = 100, windowMs: number = 60000): boolean {
-  const now = Date.now()
-  const key = ip
-  const record = rateLimitStore.get(key)
-
-  if (!record || now > record.resetTime) {
-    rateLimitStore.set(key, { count: 1, resetTime: now + windowMs })
-    return true
-  }
-
-  if (record.count >= limit) {
-    return false
-  }
-
-  record.count++
   return true
 }
 

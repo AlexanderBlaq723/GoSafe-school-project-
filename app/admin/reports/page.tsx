@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import Link from "next/link"
 import { ProtectedRoute } from "@/components/protected-route"
 import { AdminLayout } from "@/components/admin-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,82 +16,59 @@ export default function AllReportsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
+  const [reports, setReports] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // Mock data
-  const reports = [
-    {
-      id: "RPT-001",
-      title: "Large pothole on Main Street",
-      type: "pothole",
-      user: "John Driver",
-      location: "Main Street & 5th Ave",
-      status: "reviewed",
-      priority: "high",
-      date: "2024-01-03",
-    },
-    {
-      id: "RPT-002",
-      title: "Broken street light",
-      type: "street_light",
-      user: "Jane Passenger",
-      location: "123 Park Avenue",
-      status: "sent",
-      priority: "medium",
-      date: "2024-01-04",
-    },
-    {
-      id: "RPT-003",
-      title: "Accident on Highway 101",
-      type: "emergency",
-      user: "Mike Driver",
-      location: "Highway 101 Mile 45",
-      status: "handled",
-      priority: "critical",
-      date: "2024-01-02",
-    },
-    {
-      id: "RPT-004",
-      title: "Damaged road sign",
-      type: "other",
-      user: "Sarah Passenger",
-      location: "Oak Street",
-      status: "sent",
-      priority: "low",
-      date: "2024-01-05",
-    },
-    {
-      id: "RPT-005",
-      title: "Multiple potholes on residential street",
-      type: "pothole",
-      user: "Tom Driver",
-      location: "Elm Street (blocks 50-60)",
-      status: "reviewed",
-      priority: "medium",
-      date: "2024-01-05",
-    },
-  ]
+  useEffect(() => {
+    fetchReports()
+  }, [])
+
+  const fetchReports = async () => {
+    try {
+      const response = await fetch('/api/reports?role=admin')
+      const data = await response.json()
+      setReports(data.reports || [])
+    } catch (error) {
+      console.error('Failed to fetch reports:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const filteredReports = reports.filter((report) => {
+    const matchesSearch = !searchQuery || 
+      report.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      report.location?.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesStatus = statusFilter === "all" || report.status === statusFilter
+    const matchesType = typeFilter === "all" || report.incident_type === typeFilter
+    return matchesSearch && matchesStatus && matchesType
+  })
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "sent":
+      case "pending":
+        return "bg-yellow-100 text-yellow-800"
+      case "in_progress":
         return "bg-blue-100 text-blue-800"
-      case "reviewed":
-        return "bg-orange-100 text-orange-800"
-      case "handled":
+      case "resolved":
         return "bg-green-100 text-green-800"
+      case "closed":
+        return "bg-gray-100 text-gray-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
   }
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
+  const getPriorityColor = (severity: string) => {
+    switch (severity) {
       case "critical":
         return "bg-red-100 text-red-800"
       case "high":
         return "bg-orange-100 text-orange-800"
       case "medium":
         return "bg-yellow-100 text-yellow-800"
+      case "low":
+        return "bg-gray-100 text-gray-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
@@ -130,9 +108,10 @@ export default function AllReportsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="sent">Sent</SelectItem>
-                      <SelectItem value="reviewed">Reviewed</SelectItem>
-                      <SelectItem value="handled">Handled</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="resolved">Resolved</SelectItem>
+                      <SelectItem value="closed">Closed</SelectItem>
                     </SelectContent>
                   </Select>
                   <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -141,62 +120,77 @@ export default function AllReportsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="pothole">Pothole</SelectItem>
-                      <SelectItem value="street_light">Street Light</SelectItem>
+                      <SelectItem value="reckless_driving">Reckless Driving</SelectItem>
+                      <SelectItem value="overloading">Vehicle Overloading</SelectItem>
+                      <SelectItem value="driver_misconduct">Driver Misconduct</SelectItem>
+                      <SelectItem value="overcharging">Overcharging</SelectItem>
+                      <SelectItem value="vehicle_breakdown">Vehicle Breakdown</SelectItem>
+                      <SelectItem value="pothole">Pothole/Damaged Road</SelectItem>
+                      <SelectItem value="streetlight_needed">Streetlight Needed</SelectItem>
+                      <SelectItem value="accident">Traffic Accident</SelectItem>
                       <SelectItem value="emergency">Emergency</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="other">Other Safety Issue</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
               {/* Table */}
-              <div className="border rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>User</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Priority</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {reports.map((report) => (
-                      <TableRow key={report.id}>
-                        <TableCell className="font-medium">{report.id}</TableCell>
-                        <TableCell className="max-w-[200px]">
-                          <div className="truncate">{report.title}</div>
-                        </TableCell>
-                        <TableCell>
-                          <span className="capitalize">{report.type.replace("_", " ")}</span>
-                        </TableCell>
-                        <TableCell>{report.user}</TableCell>
-                        <TableCell className="max-w-[150px]">
-                          <div className="truncate">{report.location}</div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getPriorityColor(report.priority)}>{report.priority}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getStatusColor(report.status)}>{report.status}</Badge>
-                        </TableCell>
-                        <TableCell className="text-sm text-gray-600">{report.date}</TableCell>
-                        <TableCell>
-                          <Button size="sm" variant="ghost">
-                            View
-                          </Button>
-                        </TableCell>
+              {loading ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading reports...</p>
+                </div>
+              ) : filteredReports.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-gray-600">No reports found</p>
+                </div>
+              ) : (
+                <div className="border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>Severity</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredReports.map((report) => (
+                        <TableRow key={report.id}>
+                          <TableCell className="font-medium">{report.id}</TableCell>
+                          <TableCell className="max-w-[200px]">
+                            <div className="truncate">{report.description}</div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="capitalize">{report.incident_type.replace("_", " ")}</span>
+                          </TableCell>
+                          <TableCell className="max-w-[150px]">
+                            <div className="truncate">{report.location}</div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getPriorityColor(report.severity)}>{report.severity}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(report.status)}>{report.status}</Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-600">{new Date(report.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <Button size="sm" variant="ghost" asChild>
+                              <Link href={`/admin/reports/${report.id}`}>View</Link>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

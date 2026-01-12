@@ -13,11 +13,15 @@ interface User {
   vehicleNumber?: string
   phoneNumber?: string
   transportCompany?: string
+  companyName?: string
+  specialId?: string
+  officeNumber?: string
+  branchLocation?: string
 }
 
 interface AuthContextType {
   user: User | null
-  login: (email: string, password: string, role?: UserRole, licenseNumber?: string) => Promise<void>
+  login: (identifierOrEmail: string, password: string, role?: UserRole, licenseNumber?: string) => Promise<void>
   signup: (
     email: string,
     password: string,
@@ -27,7 +31,14 @@ interface AuthContextType {
     licenseNumber?: string,
     vehicleNumber?: string,
     transportCompany?: string,
-  ) => Promise<void>
+    companyName?: string,
+    dvlaOfficeId?: string,
+    officeNumber?: string,
+    branchLocation?: string,
+    serviceType?: string,
+    branchNumber?: string,
+    registrationNumber?: string,
+  ) => Promise<any>
   logout: () => void
   isLoading: boolean
 }
@@ -56,13 +67,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false)
   }, [])
 
-  const login = async (email: string, password: string, role?: UserRole, licenseNumber?: string) => {
+  const login = async (identifierOrEmail: string, password: string, role?: UserRole, licenseNumber?: string) => {
     setIsLoading(true)
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, role, licenseNumber }),
+        body: JSON.stringify({ identifier: identifierOrEmail, email: identifierOrEmail, password, role, licenseNumber }),
       })
 
       const data = await response.json()
@@ -77,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         phoneNumber: data.user.phone,
         licenseNumber: data.user.LicenseNumber || data.user.license_number,
         vehicleNumber: data.user.VehicleNumber || data.user.vehicle_number,
+        specialId: data.user.special_id || data.user.specialId || null,
       }
 
       setUser(userWithFullName)
@@ -99,22 +111,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     licenseNumber?: string,
     vehicleNumber?: string,
     transportCompany?: string,
+    companyName?: string,
+    dvlaOfficeId?: string,
+    officeNumber?: string,
+    branchLocation?: string,
+    serviceType?: string,
+    branchNumber?: string,
+    registrationNumber?: string,
   ) => {
     setIsLoading(true)
     try {
+      const payload = {
+        email,
+        password,
+        fullName,
+        phone: phoneNumber,
+        role,
+        licenseNumber,
+        vehicleNumber,
+        transportCompany,
+        companyName,
+        dvlaOfficeId,
+        officeNumber,
+        branchLocation,
+        serviceType,
+        branchNumber,
+        registrationNumber,
+      }
+
+      // Debug: inspect payload shape before stringifying to catch circular structures
+      try {
+        console.debug('signup payload:', payload)
+      } catch (e) {
+        // ignore logging errors
+      }
+
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          password,
-          fullName,
-          phone: phoneNumber,
-          role,
-          licenseNumber,
-          vehicleNumber,
-          transportCompany,
-        }),
+        body: JSON.stringify(payload),
       })
 
       const data = await response.json()
@@ -122,21 +157,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!response.ok) {
         throw new Error(data.error || "Signup failed")
       }
+      // If API returned a user, set session. For emergency services the API may return requiresApproval.
+      if (data.user) {
+        const userWithFullName = {
+          ...data.user,
+          fullName: data.user.FullName || data.user.full_name,
+          phoneNumber: data.user.phone,
+          licenseNumber: data.user.LicenseNumber || data.user.license_number,
+          vehicleNumber: data.user.VehicleNumber || data.user.vehicle_number,
+          specialId: data.user.special_id || data.user.specialId || null,
+        }
 
-      const userWithFullName = {
-        ...data.user,
-        fullName: data.user.FullName || data.user.full_name,
-        phoneNumber: data.user.phone,
-        licenseNumber: data.user.LicenseNumber || data.user.license_number,
-        vehicleNumber: data.user.VehicleNumber || data.user.vehicle_number,
+        setUser(userWithFullName)
+        
+        // Set session expiry (24 hours)
+        const expiryTime = new Date().getTime() + (24 * 60 * 60 * 1000)
+        localStorage.setItem("user", JSON.stringify(userWithFullName))
+        localStorage.setItem("sessionExpiry", expiryTime.toString())
       }
 
-      setUser(userWithFullName)
-      
-      // Set session expiry (24 hours)
-      const expiryTime = new Date().getTime() + (24 * 60 * 60 * 1000)
-      localStorage.setItem("user", JSON.stringify(userWithFullName))
-      localStorage.setItem("sessionExpiry", expiryTime.toString())
+      return data
     } finally {
       setIsLoading(false)
     }
