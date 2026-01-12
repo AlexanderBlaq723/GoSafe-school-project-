@@ -136,13 +136,13 @@ export async function POST(request: NextRequest) {
     // Route report to nearest DVLA office admin if location provided
     if (latitude && longitude) {
       try {
-        const offices = await query<Array<{ id: string; office_name: string; latitude: number; longitude: number; distance: number }>>(
+        const offices = await query(
           `SELECT id, office_name, latitude, longitude,
            (6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance
            FROM dvla_offices WHERE is_active = true
            ORDER BY distance LIMIT 1`,
           [latitude, longitude, latitude]
-        )
+        ) as Array<{ id: string; office_name: string; latitude: number; longitude: number; distance: number }>
         
         if (offices.length > 0) {
           await query(
