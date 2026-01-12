@@ -152,8 +152,8 @@ export async function POST(request: NextRequest) {
                 reportObj.location,
                 assignmentId,
                 {
-                  description: reportObj.description,
-                  severity: reportObj.severity,
+                  description: reportObj.description || '',
+                  severity: reportObj.severity || '',
                   reportedBy: 'User Report'
                 }
               )
