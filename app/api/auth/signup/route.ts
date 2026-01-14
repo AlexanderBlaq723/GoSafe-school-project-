@@ -28,28 +28,28 @@ export async function POST(request: NextRequest) {
     if (!email || !password || !fullName || !phone || !role) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
-    
+
     if (!isValidEmail(email)) {
       return NextResponse.json({ error: "Invalid email format" }, { status: 400 })
     }
-    
+
     if (!isStrongPassword(password)) {
-      return NextResponse.json({ 
-        error: "Password must be at least 8 characters with uppercase, lowercase, and number" 
+      return NextResponse.json({
+        error: "Password must be at least 8 characters with uppercase, lowercase, and number"
       }, { status: 400 })
     }
-    
+
     if (!isValidPhone(phone)) {
       return NextResponse.json({ error: "Invalid phone number format" }, { status: 400 })
     }
-    
+
     if (fullName.trim().length < 2) {
       return NextResponse.json({ error: "Full name must be at least 2 characters" }, { status: 400 })
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12)
-    
+
     // Generate ID based on user type
     let userId: string
     if (role === "passenger") {
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     } else {
       userId = uuidv4()
     }
-    
+
     // Generate a short special ID for the user (used for profile and password recovery)
     const randomPart1 = Math.floor(Math.random() * 100000).toString().padStart(5, '0')
     const randomPart2 = Math.floor(Math.random() * 100000).toString().padStart(5, '0')
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
       if (!licenseNumber || !vehicleNumber) {
         return NextResponse.json({ error: "License number and vehicle number are required for drivers" }, { status: 400 })
       }
-      
+
       const existingDriver = await query("SELECT driver_id FROM drivers WHERE email = ? OR license_number = ?", [email, licenseNumber])
       if (existingDriver.length > 0) {
         return NextResponse.json({ error: "Driver already exists with this email or license number" }, { status: 400 })
@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
         [userId, fullName.trim(), serviceType.toLowerCase(), fullName.trim(), phone, email.toLowerCase(), svcAddress, svcLat, svcLon, branchNumber || null, registrationNumber, false, true, specialId, hashedPassword]
       )
 
-      return NextResponse.json({ 
+      return NextResponse.json({
         message: "Emergency service registration submitted. Awaiting admin approval.",
         requiresApproval: true,
         specialId
@@ -233,10 +233,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ user }, { status: 201 })
   } catch (error) {
     console.error("Signup error:", error)
-    console.error("Error details:", error instanceof Error ? error.message : String(error))
-    return NextResponse.json({ 
+    // Log environment check (safely)
+    console.log("DB Config Check:", {
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      port: process.env.DB_PORT,
+      hasPassword: !!process.env.DB_PASSWORD,
+      sslConfig: process.env.DB_SSL === "false" ? "disabled" : "enabled (rejectUnauthorized: " + (process.env.DB_SSL_REJECT_UNAUTHORIZED === "true") + ")"
+    })
+
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    return NextResponse.json({
       error: "Internal server error",
-      details: error instanceof Error ? error.message : String(error)
+      details: errorMessage,
+      hint: "Check server logs for DB connection details"
     }, { status: 500 })
   }
 }
