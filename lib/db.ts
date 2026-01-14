@@ -14,6 +14,10 @@ export function getPool(database?: string) {
       connectionLimit: 10,
       queueLimit: 0,
       multipleStatements: false,
+      // Aiven and many cloud DBs require SSL
+      ssl: process.env.DB_SSL === "false" ? undefined : {
+        rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === "true"
+      },
     })
   }
   return pool
