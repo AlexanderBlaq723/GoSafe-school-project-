@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { queryDatabase } from '@/lib/db'
+import { query } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,9 +10,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Report ID required' }, { status: 400 })
     }
 
-    const assignments = await queryDatabase(
-      'user_database',
-      `SELECT sa.*, 
+    const assignments = await query(
+      `SELECT sa.*,
               es.service_name,
               es.service_type
        FROM service_assignments sa

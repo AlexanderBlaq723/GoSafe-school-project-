@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
       case 'towing-services':
         const towingServices = await query<any[]>(
-          'SELECT * FROM towing_services ORDER BY company_name'
+          'SELECT * FROM emergency_services WHERE service_type = "towing" ORDER BY service_name'
         )
         return NextResponse.json({ towingServices })
 
@@ -63,12 +63,9 @@ export async function GET(request: NextRequest) {
 
       case 'emergency-services-all':
         const allEmergency = await query<any[]>(
-          'SELECT *, "emergency" as type FROM emergency_services ORDER BY created_at DESC'
+          'SELECT *, service_type as type FROM emergency_services ORDER BY created_at DESC'
         )
-        const allTowing = await query<any[]>(
-          'SELECT *, "towing" as type FROM towing_services ORDER BY created_at DESC'
-        )
-        return NextResponse.json({ services: [...allEmergency, ...allTowing] })
+        return NextResponse.json({ services: allEmergency })
 
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
