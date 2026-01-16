@@ -55,11 +55,11 @@ export function getPool(database?: string): mysql.Pool {
     // Determine SSL configuration
     let sslConfig: any
     if (process.env.DB_SSL === "false") {
-      sslConfig = undefined
+      sslConfig = false
     } else {
-      // Enable SSL by default for cloud databases
+      // Enable SSL for cloud databases like Aiven
       sslConfig = {
-        rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === "true"
+        rejectUnauthorized: false
       }
     }
 
