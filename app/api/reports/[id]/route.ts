@@ -21,20 +21,26 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params
+    console.log(`PATCH /api/reports/${id} called with id: ${id}`)
     const body = await request.json()
+    console.log(`Request body:`, body)
     const { status, response } = body
 
     if (!status) {
+      console.log(`PATCH /api/reports/${id}: Status is required`)
       return NextResponse.json({ error: "Status is required" }, { status: 400 })
     }
 
+    console.log(`PATCH /api/reports/${id}: Updating status to ${status}`)
     await query(
       `UPDATE reports SET status = ?, admin_response = ?, updated_at = NOW() WHERE id = ?`,
       [status, response || null, id]
     )
+    console.log(`PATCH /api/reports/${id}: Update query executed`)
 
     const reports = await query("SELECT * FROM reports WHERE id = ?", [id])
     const updatedReport = reports[0]
+    console.log(`PATCH /api/reports/${id}: Fetched updated report:`, updatedReport)
 
     // Notify reporter if report is resolved
     if (status === 'resolved') {

@@ -48,7 +48,7 @@ export default function ReportDetailPage() {
   const handleSubmitResponse = async () => {
     setSubmitting(true)
     try {
-      await fetch(`/api/reports/${params.id}`, {
+      const res = await fetch(`/api/reports/${params.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -56,9 +56,15 @@ export default function ReportDetailPage() {
           response: response || "Status updated",
         }),
       })
-      alert("Response submitted successfully")
-      setResponse("")
-      fetchReport()
+      if (res.ok) {
+        alert("Response submitted successfully")
+        setResponse("")
+        fetchReport()
+      } else {
+        const errorData = await res.json()
+        console.error("Failed to submit response:", errorData)
+        alert(`Failed to submit response: ${errorData.error || 'Unknown error'}`)
+      }
     } catch (error) {
       console.error("Failed to submit response:", error)
       alert("Failed to submit response")
@@ -195,9 +201,9 @@ export default function ReportDetailPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="investigating">Investigating</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
                         <SelectItem value="resolved">Resolved</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
+                        <SelectItem value="closed">Closed</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
