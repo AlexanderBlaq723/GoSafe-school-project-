@@ -3,6 +3,7 @@ import { query, queryDatabase } from '@/lib/db'
 import { z } from 'zod'
 import { v4 as uuidv4 } from 'uuid'
 import NotificationService from '@/lib/notification-service'
+import { query as userQuery } from '@/lib/db'
 
 // Calculate distance between two coordinates (Haversine formula)
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {

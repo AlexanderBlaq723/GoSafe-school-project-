@@ -1,21 +1,28 @@
 // Notification Service for SMS and Email
 // Integrate with actual providers (Twilio for SMS, SendGrid/AWS SES for Email)
 
+import { query } from '@/lib/db';
+import { v4 as uuidv4 } from 'uuid';
+
 export class NotificationService {
   // Send SMS notification
   static async sendSMS(phone: string, message: string): Promise<boolean> {
     try {
-      // TODO: Integrate with SMS provider (e.g., Twilio, AWS SNS)
-      // Example Twilio integration:
-      // const client = require('twilio')(accountSid, authToken);
-      // await client.messages.create({
-      //   body: message,
-      //   from: process.env.TWILIO_PHONE_NUMBER,
-      //   to: phone
-      // });
-      
-      console.log(`SMS to ${phone}: ${message}`);
-      return true;
+      // Integrate with Twilio SMS provider
+      if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
+        const twilio = require('twilio');
+        const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+        await client.messages.create({
+          body: message,
+          from: process.env.TWILIO_PHONE_NUMBER,
+          to: phone
+        });
+        console.log(`SMS sent to ${phone}: ${message}`);
+        return true;
+      } else {
+        console.log(`SMS to ${phone}: ${message} (Twilio not configured)`);
+        return true; // Return true for testing
+      }
     } catch (error) {
       console.error('SMS send error:', error);
       return false;
@@ -25,20 +32,23 @@ export class NotificationService {
   // Send Email notification
   static async sendEmail(email: string, subject: string, message: string): Promise<boolean> {
     try {
-      // TODO: Integrate with Email provider (e.g., SendGrid, AWS SES, Nodemailer)
-      // Example SendGrid integration:
-      // const sgMail = require('@sendgrid/mail');
-      // sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-      // await sgMail.send({
-      //   to: email,
-      //   from: process.env.FROM_EMAIL,
-      //   subject: subject,
-      //   text: message,
-      //   html: `<p>${message}</p>`
-      // });
-      
-      console.log(`Email to ${email}: ${subject} - ${message}`);
-      return true;
+      // Integrate with SendGrid email provider
+      if (process.env.SENDGRID_API_KEY && process.env.FROM_EMAIL) {
+        const sgMail = require('@sendgrid/mail');
+        sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+        await sgMail.send({
+          to: email,
+          from: process.env.FROM_EMAIL,
+          subject: subject,
+          text: message,
+          html: `<p>${message.replace(/\n/g, '<br>')}</p>`
+        });
+        console.log(`Email sent to ${email}: ${subject}`);
+        return true;
+      } else {
+        console.log(`Email to ${email}: ${subject} - ${message} (SendGrid not configured)`);
+        return true; // Return true for testing
+      }
     } catch (error) {
       console.error('Email send error:', error);
       return false;
@@ -86,6 +96,27 @@ export class NotificationService {
 
     // Dashboard notification is automatic via service_assignments table
     console.log(`Dashboard notification created for ${serviceName}`);
+  }
+
+  // Create in-app notification
+  static async createInAppNotification(
+    recipientId: string,
+    recipientType: string,
+    title: string,
+    message: string,
+    type: string = 'general',
+    relatedId?: string
+  ): Promise<void> {
+    try {
+      const notificationId = uuidv4();
+      await query(
+        `INSERT INTO notifications (notification_id, recipient_id, recipient_type, title, message, type, related_id) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [notificationId, recipientId, recipientType, title, message, type, relatedId || null]
+      );
+      console.log(`In-app notification created for ${recipientType}: ${title}`);
+    } catch (error) {
+      console.error('Failed to create in-app notification:', error);
+    }
   }
 }
 

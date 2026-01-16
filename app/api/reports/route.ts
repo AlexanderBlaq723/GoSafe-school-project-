@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { query } from "@/lib/db"
 import { v4 as uuidv4 } from "uuid"
+import NotificationService from "@/lib/notification-service"
 
 export async function GET(request: NextRequest) {
   try {
@@ -124,10 +125,24 @@ export async function POST(request: NextRequest) {
     // Update driver report count if vehicle number is provided
     if (vehicleNumber && ['reckless_driving', 'overloading', 'driver_misconduct', 'overcharging'].includes(type)) {
       try {
-        await query(
+        const updateResult = await query(
           'UPDATE users SET reported_count = reported_count + 1, is_flagged = CASE WHEN reported_count + 1 >= 2 THEN true ELSE is_flagged END WHERE vehicle_number = ? AND role = "driver"',
           [vehicleNumber]
         )
+
+        // Notify the driver about the report
+        const driverResult = await query('SELECT id FROM users WHERE vehicle_number = ? AND role = "driver"', [vehicleNumber])
+        if (driverResult.length > 0) {
+          const driverId = driverResult[0].id
+          await NotificationService.createInAppNotification(
+            driverId,
+            'driver',
+            'Report Filed Against You',
+            `A ${type.replace('_', ' ')} report has been filed against your vehicle ${vehicleNumber}. Please review your conduct.`,
+            'driver_reported',
+            reportId
+          )
+        }
       } catch (error) {
         console.error('Failed to update driver report count:', error)
       }
@@ -153,6 +168,20 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         console.error('Failed to assign DVLA office:', error)
       }
+    }
+
+    // Send confirmation notification to reporter
+    try {
+      await NotificationService.createInAppNotification(
+        userId,
+        'passenger', // Assuming passenger for now, could be driver
+        'Report Submitted',
+        `Your report #${reportId} has been submitted successfully. We will review it shortly.`,
+        'report_created',
+        reportId
+      );
+    } catch (notifError) {
+      console.error('Failed to create report confirmation notification:', notifError);
     }
 
     const [report] = await query("SELECT * FROM reports WHERE id = ?", [reportId])
