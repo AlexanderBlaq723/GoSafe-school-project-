@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { query } from '@/lib/db'
+import { queryDatabase } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ assignments })
   } catch (error) {
     console.error('Failed to fetch service assignments:', error)
+    console.error('Error details:', error instanceof Error ? error.message : String(error))
     return NextResponse.json({ error: 'Failed to fetch assignments' }, { status: 500 })
   }
 }
