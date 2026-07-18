@@ -1,4 +1,6 @@
 "use client"
+import { safeParseUrls } from '@/lib/url-utils'
+import { S3Image, S3Video } from '@/components/s3-image'
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -288,17 +290,17 @@ export default function EmergencyServicesPortal() {
                   {(selectedAssignment.image_urls || selectedAssignment.video_urls) && (
                     <div className="bg-gray-50 p-4 rounded-xl border">
                       <h4 className="font-bold text-gray-900 mb-3">Evidence</h4>
-                      {selectedAssignment.image_urls && JSON.parse(selectedAssignment.image_urls).length > 0 && (
+                      {selectedAssignment.image_urls && safeParseUrls(selectedAssignment.image_urls).length > 0 && (
                         <div className="grid grid-cols-2 gap-2 mb-3">
-                          {JSON.parse(selectedAssignment.image_urls).map((url: string, i: number) => (
-                            <img key={i} src={url} alt={`Evidence ${i + 1}`} className="rounded border w-full h-32 object-cover" />
+                          {safeParseUrls(selectedAssignment.image_urls).map((key: string, i: number) => (
+                            <S3Image key={i} s3Key={key} alt={`Evidence ${i + 1}`} className="rounded border w-full h-32 object-cover" />
                           ))}
                         </div>
                       )}
-                      {selectedAssignment.video_urls && JSON.parse(selectedAssignment.video_urls).length > 0 && (
+                      {selectedAssignment.video_urls && safeParseUrls(selectedAssignment.video_urls).length > 0 && (
                         <div className="space-y-2">
-                          {JSON.parse(selectedAssignment.video_urls).map((url: string, i: number) => (
-                            <video key={i} src={url} controls className="rounded border w-full" />
+                          {safeParseUrls(selectedAssignment.video_urls).map((key: string, i: number) => (
+                            <S3Video key={i} s3Key={key} className="rounded border w-full" />
                           ))}
                         </div>
                       )}

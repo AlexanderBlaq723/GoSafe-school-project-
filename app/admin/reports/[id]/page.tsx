@@ -1,4 +1,6 @@
 "use client"
+import { safeParseUrls } from '@/lib/url-utils'
+import { S3Image } from '@/components/s3-image'
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
@@ -173,12 +175,12 @@ export default function ReportDetailPage() {
                     </div>
                   )}
 
-                  {report.image_urls && JSON.parse(report.image_urls).length > 0 && (
+                  {report.image_urls && safeParseUrls(report.image_urls).length > 0 && (
                     <div>
                       <h3 className="font-semibold mb-2">Evidence</h3>
                       <div className="grid grid-cols-2 gap-4">
-                        {JSON.parse(report.image_urls).map((url: string, i: number) => (
-                          <img key={i} src={url} alt={`Evidence ${i + 1}`} className="rounded border w-full h-48 object-cover" />
+                        {safeParseUrls(report.image_urls).map((key: string, i: number) => (
+                          <S3Image key={i} s3Key={key} alt={`Evidence ${i + 1}`} className="rounded border w-full h-48 object-cover" />
                         ))}
                       </div>
                     </div>
