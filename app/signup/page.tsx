@@ -114,6 +114,16 @@ export default function SignupPage() {
     }
   }, [role])
 
+  const handleDvlaOfficeChange = (value: string) => {
+    setDvlaOfficeId(value)
+
+    const selectedOffice = dvlaOffices.find((office) => office.id === value)
+    if (selectedOffice) {
+      setOfficeNumber(selectedOffice.office_number || "")
+      setBranchLocation(selectedOffice.branch_location || "")
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <Card className="w-full max-w-md">
@@ -243,7 +253,7 @@ export default function SignupPage() {
               <>
                 <div className="space-y-2">
                   <Label htmlFor="dvlaOffice">DVLA Office</Label>
-                  <Select value={dvlaOfficeId} onValueChange={(v: any) => setDvlaOfficeId(v)}>
+                  <Select value={dvlaOfficeId} onValueChange={(v: any) => handleDvlaOfficeChange(v)}>
                     <SelectTrigger id="dvlaOffice">
                       <SelectValue placeholder="Select DVLA office" />
                     </SelectTrigger>
@@ -258,6 +268,7 @@ export default function SignupPage() {
                 <div className="space-y-2">
                   <Label htmlFor="officeNumber">Office Number</Label>
                   <Input id="officeNumber" type="text" placeholder="Office number" value={officeNumber} onChange={(e) => setOfficeNumber(e.target.value)} />
+                  <p className="text-xs text-muted-foreground">This is filled automatically from the selected DVLA office.</p>
                 </div>
 
                 <div className="space-y-2">

@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { query } from "@/lib/db"
 import bcrypt from "bcryptjs"
 import { v4 as uuidv4 } from "uuid"
+const { validateAdminOfficeSelection } = require("@/lib/admin-office-validation")
 
 function isValidEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -137,21 +138,16 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Invalid DVLA office selected" }, { status: 400 })
       }
 
-      // If client provided an officeNumber, ensure it matches the canonical office_number
-      if (officeNumber && office.office_number !== officeNumber) {
-        return NextResponse.json({ error: "Provided office number does not match the selected DVLA office" }, { status: 400 })
-      }
-
-      // If client provided a branchLocation, ensure it matches (case-insensitive)
-      if (branchLocation && office.branch_location.toLowerCase() !== branchLocation.toLowerCase()) {
-        return NextResponse.json({ error: "Provided branch location does not match the selected DVLA office" }, { status: 400 })
+      const officeValidation = validateAdminOfficeSelection(office)
+      if (!officeValidation.isValid) {
+        return NextResponse.json({ error: officeValidation.error }, { status: 400 })
       }
 
       // Canonicalize fields to ensure DB stores the authoritative values
       const canonicalOfficeId = office.id
-      const canonicalOfficeNumber = office.office_number
-      const canonicalBranchLocation = office.branch_location
-      const canonicalRegion = office.region || null
+      const canonicalOfficeNumber = officeValidation.canonicalOfficeNumber || office.office_number
+      const canonicalBranchLocation = officeValidation.canonicalBranchLocation || office.branch_location
+      const canonicalRegion = officeValidation.canonicalRegion || office.region || null
 
       const existingAdmin = await query("SELECT admin_id FROM administrators WHERE email = ?", [email])
       console.log('Existing admin check:', existingAdmin)
