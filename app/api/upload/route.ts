@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { writeFile } from "fs/promises"
-import { join } from "path"
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3"
 import { v4 as uuidv4 } from "uuid"
+
+const s3 = new S3Client({ region: process.env.AWS_REGION })
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,26 +19,29 @@ export async function POST(request: NextRequest) {
       const bytes = await file.arrayBuffer()
       const buffer = Buffer.from(bytes)
 
-      // Generate unique filename
       const fileExtension = file.name.split('.').pop()
       const fileName = `${uuidv4()}.${fileExtension}`
-      
-      // Save to public/uploads directory
-      const path = join(process.cwd(), 'public', 'uploads', fileName)
-      await writeFile(path, buffer)
+      const key = `incident-photos/${fileName}`
+
+      await s3.send(new PutObjectCommand({
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: key,
+        Body: buffer,
+        ContentType: file.type,
+      }))
 
       uploadedFiles.push({
         filename: fileName,
         originalName: file.name,
         size: file.size,
         type: file.type,
-        url: `/uploads/${fileName}`
+        url: key,
       })
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: "Files uploaded successfully",
-      files: uploadedFiles 
+      files: uploadedFiles
     })
   } catch (error) {
     console.error("Upload error:", error)
