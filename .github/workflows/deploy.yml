@@ -14,4 +14,21 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          script: bash ~/redeploy.sh
+          script: |
+            set -e
+            mkdir -p /home/ubuntu
+            if [ ! -d /home/ubuntu/GoSafe-school-project-/.git ]; then
+              git clone https://github.com/asktheredteam/GoSafe-school-project- /home/ubuntu/GoSafe-school-project-
+            fi
+            cd /home/ubuntu/GoSafe-school-project-
+            git fetch origin main
+            git checkout main
+            git pull origin main
+            npm install
+            npm run build
+            if pm2 list | grep -q 'gosafe'; then
+              pm2 restart gosafe
+            else
+              pm2 start ecosystem.config.js
+            fi
+            pm2 save
