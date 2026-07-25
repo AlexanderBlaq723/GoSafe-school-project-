@@ -44,6 +44,8 @@ export default function BusRequestForm() {
         if (response.ok) {
           alert(data.message)
           setFormData({ location: "", destination: "", passengerCount: 1 })
+          // Notify other parts of the app to refresh requests
+          try { window.dispatchEvent(new CustomEvent('busRequestsUpdated')) } catch (e) {}
         } else {
           alert(data.error)
         }

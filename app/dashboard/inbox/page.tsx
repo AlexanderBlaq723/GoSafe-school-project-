@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useAuth } from "@/lib/auth-context"
 import { ProtectedRoute } from "@/components/protected-route"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent } from "@/components/ui/card"
@@ -12,53 +13,42 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function InboxPage() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: "update",
-      title: "Report Status Updated",
-      message: "Your pothole report on Main Street has been reviewed and assigned to a maintenance team.",
-      reportId: "RPT-001",
-      date: "2024-01-04",
-      time: "3:45 PM",
-      isRead: false,
-      icon: CheckCircle,
-    },
-    {
-      id: 2,
-      type: "alert",
-      title: "Urgent: Emergency Report Acknowledged",
-      message: "Your emergency report on Highway 101 has been acknowledged. Emergency services are on the way.",
-      reportId: "RPT-003",
-      date: "2024-01-02",
-      time: "8:50 AM",
-      isRead: false,
-      icon: AlertCircle,
-    },
-    {
-      id: 3,
-      type: "system",
-      title: "Welcome to Emergency Report System",
-      message:
-        "Thank you for joining! You can now report incidents, track your submissions, and receive real-time updates.",
-      reportId: null,
-      date: "2024-01-01",
-      time: "9:00 AM",
-      isRead: true,
-      icon: Info,
-    },
-    {
-      id: 4,
-      type: "update",
-      title: "Report Resolved",
-      message: "The street light issue you reported on Park Avenue has been fixed. Thank you for your report!",
-      reportId: "RPT-002",
-      date: "2024-01-05",
-      time: "11:30 AM",
-      isRead: false,
-      icon: CheckCircle,
-    },
-  ])
+  const [notifications, setNotifications] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  
+  const { user } = useAuth()
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      setLoading(true)
+      try {
+        if (!user) return
+        const res = await fetch(`/api/notifications?userId=${encodeURIComponent(user.id)}&recipientType=${encodeURIComponent(user.role)}`)
+        const data = await res.json()
+        const items = (data.notifications || []).map((n: any) => ({
+          id: n.notification_id || n.id,
+          type: n.type || 'system',
+          title: n.title,
+          message: n.message,
+          reportId: n.related_id || n.report_id || null,
+          date: n.created_at ? new Date(n.created_at).toLocaleDateString() : '',
+          time: n.created_at ? new Date(n.created_at).toLocaleTimeString() : '',
+          isRead: !!n.is_read,
+          raw: n,
+          icon: n.type === 'alert' ? AlertCircle : n.type === 'update' ? CheckCircle : Info,
+        }))
+        setNotifications(items)
+        // notify layouts to update unread badges
+        window.dispatchEvent(new CustomEvent('notificationsUpdated'))
+      } catch (err) {
+        console.error('Failed to fetch notifications', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchNotifications()
+  }, [user])
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -73,16 +63,52 @@ export default function InboxPage() {
     }
   }
 
-  const markAsRead = (id: number) => {
-    setNotifications(notifications.map((notif) => (notif.id === id ? { ...notif, isRead: true } : notif)))
+  const markAsRead = async (id: any) => {
+    try {
+      const notif = notifications.find((n) => n.id === id)
+      if (!notif) return
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationId: notif.raw.notification_id || notif.raw.id, isRead: true })
+      })
+      const updated = notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+      setNotifications(updated)
+      window.dispatchEvent(new CustomEvent('notificationsUpdated'))
+    } catch (err) {
+      console.error('Failed to mark as read', err)
+    }
   }
 
-  const deleteNotification = (id: number) => {
-    setNotifications(notifications.filter((notif) => notif.id !== id))
+  const deleteNotification = async (id: any) => {
+    try {
+      const notif = notifications.find((n) => n.id === id)
+      if (!notif) return
+      await fetch('/api/notifications', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationId: notif.raw.notification_id || notif.raw.id })
+      })
+      setNotifications((prev) => prev.filter((notif) => notif.id !== id))
+      window.dispatchEvent(new CustomEvent('notificationsUpdated'))
+    } catch (err) {
+      console.error('Failed to delete notification', err)
+    }
   }
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((notif) => ({ ...notif, isRead: true })))
+  const markAllAsRead = async () => {
+    try {
+      const unread = notifications.filter((n) => !n.isRead)
+      await Promise.all(unread.map((n) => fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationId: n.raw.notification_id || n.raw.id, isRead: true })
+      })))
+      setNotifications(notifications.map((notif) => ({ ...notif, isRead: true })))
+      window.dispatchEvent(new CustomEvent('notificationsUpdated'))
+    } catch (err) {
+      console.error('Failed to mark all as read', err)
+    }
   }
 
   const unreadNotifications = notifications.filter((n) => !n.isRead)
@@ -138,7 +164,9 @@ export default function InboxPage() {
             </TabsList>
 
             <TabsContent value="all" className="space-y-3">
-              {notifications.length === 0 ? (
+              {loading ? (
+                <div className="text-center py-8">Loading...</div>
+              ) : notifications.length === 0 ? (
                 <Card>
                   <CardContent className="py-12 text-center">
                     <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />

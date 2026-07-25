@@ -30,3 +30,16 @@ test('uses the selected office as the source of truth even if other values are p
   assert.equal(result.canonicalOfficeNumber, 'DVLA-ACC-002')
   assert.equal(result.canonicalBranchLocation, 'Accra Central')
 })
+
+test('rejects mismatched office number or branch location supplied by the admin', () => {
+  const office = {
+    office_number: 'DVLA-ACC-002',
+    branch_location: 'Accra Central',
+    region: 'Greater Accra',
+  }
+
+  const result = validateAdminOfficeSelection(office, 'DVLA-ACC-999', 'Kumasi')
+
+  assert.equal(result.isValid, false)
+  assert.match(result.error, /do not match/i)
+})

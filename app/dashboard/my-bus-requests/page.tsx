@@ -15,6 +15,9 @@ export default function MyBusRequestsPage() {
 
   useEffect(() => {
     fetchRequests()
+    const onUpdate = () => fetchRequests()
+    window.addEventListener('busRequestsUpdated', onUpdate)
+    return () => window.removeEventListener('busRequestsUpdated', onUpdate)
   }, [user])
 
   const fetchRequests = async () => {

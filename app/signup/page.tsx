@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, Eye, EyeOff } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
 
@@ -34,6 +34,9 @@ export default function SignupPage() {
   const [branchNumber, setBranchNumber] = useState("")
   const [registrationNumber, setRegistrationNumber] = useState("")
   const [companyName, setCompanyName] = useState("")
+  const [adminInviteCode, setAdminInviteCode] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState("")
   const { signup, isLoading } = useAuth()
   const router = useRouter()
@@ -52,8 +55,8 @@ export default function SignupPage() {
       return
     }
 
-    if (role === "admin" && (!dvlaOfficeId || !officeNumber || !branchLocation)) {
-      setError("DVLA office, office number and branch location are required for admin registration")
+    if (role === "admin" && (!dvlaOfficeId || !officeNumber || !branchLocation || !adminInviteCode)) {
+      setError("DVLA office, office number, branch location, and admin invite code are required for admin registration")
       return
     }
 
@@ -89,6 +92,7 @@ export default function SignupPage() {
         serviceType,
         branchNumber,
         registrationNumber,
+        adminInviteCode,
       )
 
       if (result?.requiresApproval) {
@@ -275,6 +279,19 @@ export default function SignupPage() {
                   <Label htmlFor="branchLocation">Branch Location</Label>
                   <Input id="branchLocation" type="text" placeholder="Branch location" value={branchLocation} onChange={(e) => setBranchLocation(e.target.value)} />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="adminInviteCode">Admin invite code</Label>
+                  <Input
+                    id="adminInviteCode"
+                    type="text"
+                    placeholder="Enter admin invite code"
+                    value={adminInviteCode}
+                    onChange={(e) => setAdminInviteCode(e.target.value)}
+                    disabled={isLoading}
+                  />
+                  <p className="text-xs text-muted-foreground">Only approved DVLA administrators may register with a valid invite code.</p>
+                </div>
               </>
             )}
 
@@ -326,28 +343,44 @@ export default function SignupPage() {
               </>
             )}
 
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="Create a password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-[2.6rem] inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-slate-100"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
               <Input
                 id="confirmPassword"
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 placeholder="Confirm your password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={isLoading}
               />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                className="absolute right-3 top-[2.6rem] inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-slate-100"
+                aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+              >
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>

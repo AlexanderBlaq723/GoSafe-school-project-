@@ -6,10 +6,12 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useRouter } from "next/navigation"
+import { Eye, EyeOff } from "lucide-react"
 
 export default function ResetPasswordPage() {
   const [token, setToken] = useState("")
   const [newPassword, setNewPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [message, setMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -52,9 +54,21 @@ export default function ResetPasswordPage() {
               <Label>Reset Token</Label>
               <Input value={token} onChange={(e) => setToken(e.target.value)} />
             </div>
-            <div>
+            <div className="relative">
               <Label>New Password</Label>
-              <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+              <Input
+                type={showPassword ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-11 inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-slate-100"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
             {message && <div className="text-sm text-gray-600">{message}</div>}
             <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? 'Resetting...' : 'Reset Password'}</Button>

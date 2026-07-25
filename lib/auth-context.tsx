@@ -38,6 +38,7 @@ interface AuthContextType {
     serviceType?: string,
     branchNumber?: string,
     registrationNumber?: string,
+    adminInviteCode?: string,
   ) => Promise<any>
   logout: () => void
   isLoading: boolean
@@ -118,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     serviceType?: string,
     branchNumber?: string,
     registrationNumber?: string,
+    adminInviteCode?: string,
   ) => {
     setIsLoading(true)
     try {
@@ -137,6 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         serviceType,
         branchNumber,
         registrationNumber,
+        adminInviteCode,
       }
 
       // Debug: inspect payload shape before stringifying to catch circular structures

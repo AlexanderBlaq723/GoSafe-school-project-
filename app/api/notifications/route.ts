@@ -47,3 +47,25 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { notificationId } = body
+
+    if (!notificationId) {
+      return NextResponse.json({ error: "Missing notification ID" }, { status: 400 })
+    }
+
+    // Soft-delete or hard-delete depending on schema. We'll remove the row.
+    await query(
+      "DELETE FROM notifications WHERE notification_id = ?",
+      [notificationId]
+    )
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Notification delete error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}

@@ -18,6 +18,9 @@ export default function BusRequestsPage() {
   useEffect(() => {
     fetchRequests()
     fetchHotSpots()
+    const onUpdate = () => fetchRequests()
+    window.addEventListener('busRequestsUpdated', onUpdate)
+    return () => window.removeEventListener('busRequestsUpdated', onUpdate)
   }, [])
 
   const fetchRequests = async () => {
@@ -80,6 +83,7 @@ export default function BusRequestsPage() {
       if (response.ok) {
         alert(data.message + `\nCapacity: ${data.totalCapacity}/${data.requiredCapacity}`)
         fetchRequests()
+        try { window.dispatchEvent(new CustomEvent('busRequestsUpdated')) } catch (e) {}
       } else {
         alert(data.error || "Failed to accept request")
       }
