@@ -11,7 +11,8 @@ export async function columnExists(table: string, column: string): Promise<boole
 export async function ensureColumn(table: string, column: string, definition: string): Promise<void> {
   const exists = await columnExists(table, column)
   if (!exists) {
-    await query(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
+    // Use backtick-quoted column name; definition is internal/hardcoded so safe
+    await query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`)
   }
 }
 

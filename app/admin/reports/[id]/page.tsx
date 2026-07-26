@@ -103,29 +103,14 @@ export default function ReportDetailPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <ProtectedRoute allowedRoles={["admin"]}>
-        <AdminLayout>
-          <div className="p-8 text-center">Loading...</div>
-        </AdminLayout>
-      </ProtectedRoute>
-    )
-  }
-
-  if (!report) {
-    return (
-      <ProtectedRoute allowedRoles={["admin"]}>
-        <AdminLayout>
-          <div className="p-8 text-center">Report not found</div>
-        </AdminLayout>
-      </ProtectedRoute>
-    )
-  }
-
   return (
     <ProtectedRoute allowedRoles={["admin"]}>
       <AdminLayout>
+        {loading ? (
+          <div className="p-8 text-center">Loading...</div>
+        ) : !report ? (
+          <div className="p-8 text-center">Report not found</div>
+        ) : (
         <div className="space-y-6">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/admin">
@@ -290,6 +275,7 @@ export default function ReportDetailPage() {
             </div>
           </div>
         </div>
+        )}
       </AdminLayout>
     </ProtectedRoute>
   )

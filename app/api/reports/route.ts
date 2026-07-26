@@ -137,14 +137,14 @@ export async function POST(request: NextRequest) {
     if (vehicleNumber && ['reckless_driving', 'overloading', 'driver_misconduct', 'overcharging'].includes(type)) {
       try {
         const updateResult = await query(
-          'UPDATE users SET reported_count = reported_count + 1, is_flagged = CASE WHEN reported_count + 1 >= 2 THEN true ELSE is_flagged END WHERE vehicle_number = ? AND role = "driver"',
+          'UPDATE drivers SET reported_count = reported_count + 1, is_flagged = CASE WHEN reported_count + 1 >= 2 THEN true ELSE is_flagged END WHERE vehicle_number = ?',
           [vehicleNumber]
         )
 
         // Notify the driver about the report
-        const driverResult = await query('SELECT id FROM users WHERE vehicle_number = ? AND role = "driver"', [vehicleNumber])
+        const driverResult = await query('SELECT driver_id FROM drivers WHERE vehicle_number = ?', [vehicleNumber])
         if (driverResult.length > 0) {
-          const driverId = driverResult[0].id
+          const driverId = driverResult[0].driver_id
           await NotificationService.createInAppNotification(
             driverId,
             'driver',

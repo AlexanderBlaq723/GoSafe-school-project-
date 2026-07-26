@@ -25,6 +25,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 
 export default function AnalyticsPage() {
   const [reportType, setReportType] = useState('all')
+  const [period, setPeriod] = useState('month')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [analytics, setAnalytics] = useState<any[]>([])
@@ -32,12 +33,17 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchAnalytics()
-  }, [reportType, startDate, endDate])
+    const datePattern = /^\d{4}-\d{2}-\d{2}$/
+    const datesValid = (!startDate && !endDate) || (datePattern.test(startDate) && datePattern.test(endDate))
+    if (!datesValid) return
+
+    const timer = setTimeout(fetchAnalytics, 500)
+    return () => clearTimeout(timer)
+  }, [reportType, period, startDate, endDate])
 
   const fetchAnalytics = async () => {
     try {
-      let url = `/api/analytics?reportType=${reportType}`
+      let url = `/api/analytics?reportType=${reportType}&period=${period}`
       if (startDate && endDate) {
         url += `&startDate=${startDate}&endDate=${endDate}`
       }
@@ -71,7 +77,7 @@ export default function AnalyticsPage() {
               <CardTitle>Filters</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Report Type</label>
                   <Select value={reportType} onValueChange={setReportType}>
@@ -90,6 +96,19 @@ export default function AnalyticsPage() {
                       <SelectItem value="accident">Traffic Accident</SelectItem>
                       <SelectItem value="emergency">Emergency</SelectItem>
                       <SelectItem value="other">Other Safety Issue</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Period</label>
+                  <Select value={period} onValueChange={setPeriod}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="week">Week</SelectItem>
+                      <SelectItem value="month">Month</SelectItem>
+                      <SelectItem value="year">Year</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
         originalName: file.name,
         size: file.size,
         type: file.type,
-        url: key,
+        url: `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION ?? 'us-east-1'}.amazonaws.com/${key}`,
       })
     }
 

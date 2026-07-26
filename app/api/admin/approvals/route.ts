@@ -6,9 +6,36 @@ import { ensureAdminApprovalColumns } from '@/lib/db-helpers'
 export async function GET(request: NextRequest) {
   try {
     await ensureAdminApprovalColumns()
-    const pendingServices = await query<any[]>(`SELECT service_id as id, service_name, service_type, contact_person, phone, email, address, branch_number, registration_number, created_at FROM emergency_services WHERE is_approved = false ORDER BY created_at ASC`)
-    const pendingAdmins = await query<any[]>(`SELECT admin_id as id, full_name, email, dvla_office_id, office_number, branch_location, special_id, approval_status, created_at FROM administrators WHERE is_approved = false ORDER BY created_at ASC`)
-    return NextResponse.json({ pendingServices, pendingAdmins })
+
+    const pendingServices = await query<any[]>(
+      `SELECT service_id as id, service_name, service_type, contact_person, phone, email,
+              address, branch_number, registration_number, created_at, 'emergency' as source
+       FROM emergency_services
+       WHERE is_approved = 0
+       ORDER BY created_at ASC`
+    ).catch(() => [])
+
+    const pendingTowing = await query<any[]>(
+      `SELECT service_id as id, company_name as service_name, service_type, NULL as contact_person,
+              contact_number as phone, email, location as address, branch_number,
+              registration_number, created_at, 'towing' as source
+       FROM towing_services
+       WHERE is_approved = 0
+       ORDER BY created_at ASC`
+    ).catch(() => [])
+
+    const pendingAdmins = await query<any[]>(
+      `SELECT admin_id as id, full_name, email, dvla_office_id, office_number,
+              branch_location, special_id, approval_status, created_at
+       FROM administrators
+       WHERE is_approved = 0
+       ORDER BY created_at ASC`
+    ).catch(() => [])
+
+    return NextResponse.json({
+      pendingServices: [...(pendingServices ?? []), ...(pendingTowing ?? [])],
+      pendingAdmins: pendingAdmins ?? [],
+    })
   } catch (error) {
     console.error('Fetch pending approvals error:', error)
     return NextResponse.json({ error: 'Failed to fetch pending approvals' }, { status: 500 })

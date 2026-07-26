@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
-import { Bell, Menu, User, LogOut, LayoutDashboard, BarChart3, Users, CheckSquare } from "lucide-react"
+import { Bell, Menu, User, LogOut, LayoutDashboard, BarChart3, Users, CheckSquare, Inbox } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
@@ -35,6 +35,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
     { name: "All Reports", href: "/admin/reports", icon: Users },
     { name: "Approvals", href: "/admin/approvals", icon: CheckSquare },
+    { name: "Inbox", href: "/admin/inbox", icon: Inbox },
   ]
 
   useEffect(() => {
@@ -142,7 +143,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 variant="ghost"
                 size="icon"
                 className="relative"
-                onClick={() => router.push('/dashboard/inbox')}
+                onClick={() => router.push('/admin/inbox')}
               >
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 ? (
