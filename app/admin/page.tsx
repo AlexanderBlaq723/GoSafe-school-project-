@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { ProtectedRoute } from "@/components/protected-route"
 import { AdminLayout } from "@/components/admin-layout"
+import { useAuth } from "@/lib/auth-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -133,6 +134,8 @@ function BusRequestsTab() {
 }
 
 export default function AdminDashboardPage() {
+  const { user } = useAuth()
+  const adminId = user?.id ?? 'unknown'
   const [drivers, setDrivers] = useState<any[]>([])
   const [vehicleRequests, setVehicleRequests] = useState<any[]>([])
   const [flaggedDrivers, setFlaggedDrivers] = useState<any[]>([])
@@ -184,7 +187,7 @@ export default function AdminDashboardPage() {
         body: JSON.stringify({
           action: action === 'approve' ? 'approve-vehicle-change' : 'reject-vehicle-change',
           requestId,
-          adminId: 'admin-user-id',
+          adminId,
           notes
         })
       })
@@ -220,7 +223,7 @@ export default function AdminDashboardPage() {
         body: JSON.stringify({
           action: actionType,
           serviceId,
-          adminId: 'admin-user-id'
+          adminId,
         })
       })
       fetchData()

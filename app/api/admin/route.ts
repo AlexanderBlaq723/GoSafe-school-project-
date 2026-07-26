@@ -89,15 +89,15 @@ export async function POST(request: NextRequest) {
           [data.adminId, data.notes || null, data.requestId]
         )
 
-        const [request] = await query<any>(
+        const [vcRequest] = await query<any>(
           'SELECT driver_id, new_vehicle_number FROM vehicle_change_requests WHERE id = ?',
           [data.requestId]
         )
         
-        if (request) {
+        if (vcRequest) {
           await query(
-            'UPDATE users SET vehicle_number = ? WHERE id = ?',
-            [request.new_vehicle_number, request.driver_id]
+            'UPDATE drivers SET vehicle_number = ? WHERE driver_id = ?',
+            [vcRequest.new_vehicle_number, vcRequest.driver_id]
           )
         }
 

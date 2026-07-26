@@ -134,8 +134,7 @@ export async function POST(request: NextRequest) {
           if (incomingReport) {
             reportObj = incomingReport as Report
           } else if (reportId) {
-            const reports = await queryDatabase<Report[]>(
-              'incident_emergency',
+            const reports = await query<Report[]>(
               'SELECT * FROM reports WHERE id = ?',
               [reportId]
             )

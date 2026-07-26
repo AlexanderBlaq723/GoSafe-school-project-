@@ -72,7 +72,10 @@ export async function GET(request: NextRequest) {
       [...dateParams, ...typeParams]
     )
 
-    return NextResponse.json({ analytics, summary: summary[0] })
+    // All-time total (unaffected by date/type filters) so admin dashboard stat card is consistent
+    const [allTime] = await query(`SELECT COUNT(*) as total FROM reports`)
+
+    return NextResponse.json({ analytics, summary: summary[0], allTimeTotal: Number((allTime as any).total ?? 0) })
   } catch (error) {
     console.error('Analytics error:', error)
     return NextResponse.json({ error: 'Failed to fetch analytics' }, { status: 500 })

@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/auth-context"
 import { ProtectedRoute } from "@/components/protected-route"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,6 +18,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function EmergencyPage() {
   const router = useRouter()
+  const { user } = useAuth()
   const [serviceType, setServiceType] = useState("")
   const [location, setLocation] = useState("")
   const [description, setDescription] = useState("")
@@ -38,13 +40,29 @@ export default function EmergencyPage() {
     setIsSubmitting(true)
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const res = await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.id,
+          type: 'emergency',
+          title: `Emergency: ${serviceType}`,
+          description: `${description}\n\nContact: ${contactNumber}`,
+          location,
+          priority: 'critical',
+          requestEmergency: true,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to send alert')
+      }
+
       setSuccess(true)
-      setTimeout(() => {
-        router.push("/dashboard")
-      }, 2000)
-    } catch (err) {
-      setError("Failed to contact emergency service. Please try calling directly.")
+      setTimeout(() => router.push("/dashboard"), 2000)
+    } catch (err: any) {
+      setError(err.message || "Failed to contact emergency service. Please try calling directly.")
     } finally {
       setIsSubmitting(false)
     }

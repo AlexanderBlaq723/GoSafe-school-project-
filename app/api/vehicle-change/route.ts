@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     }
 
     const driver = await query<{ vehicle_number: string }>(
-      'SELECT vehicle_number FROM users WHERE id = ?',
+      'SELECT vehicle_number FROM drivers WHERE driver_id = ?',
       [driverId]
     )
 

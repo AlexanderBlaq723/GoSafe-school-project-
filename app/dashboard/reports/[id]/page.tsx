@@ -49,29 +49,14 @@ export default function PassengerReportDetailPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <ProtectedRoute allowedRoles={["driver", "passenger"]}>
-        <DashboardLayout>
-          <div className="p-8 text-center">Loading...</div>
-        </DashboardLayout>
-      </ProtectedRoute>
-    )
-  }
-
-  if (!report) {
-    return (
-      <ProtectedRoute allowedRoles={["driver", "passenger"]}>
-        <DashboardLayout>
-          <div className="p-8 text-center">Report not found</div>
-        </DashboardLayout>
-      </ProtectedRoute>
-    )
-  }
-
   return (
     <ProtectedRoute allowedRoles={["driver", "passenger"]}>
       <DashboardLayout>
+        {loading ? (
+          <div className="p-8 text-center">Loading...</div>
+        ) : !report ? (
+          <div className="p-8 text-center">Report not found</div>
+        ) : (
         <div className="space-y-6">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/dashboard/history">
@@ -180,6 +165,7 @@ export default function PassengerReportDetailPage() {
             </CardContent>
           </Card>
         </div>
+        )}
       </DashboardLayout>
     </ProtectedRoute>
   )
