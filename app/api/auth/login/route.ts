@@ -1,6 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { query } from "@/lib/db"
 import bcrypt from "bcryptjs"
+import jwt from "jsonwebtoken"
+import { ensureAdminApprovalColumns } from "@/lib/db-helpers"
+import { safeLog } from "@/lib/logger"
+
+const AUTH_SECRET = process.env.AUTH_SECRET || process.env.JWT_SECRET || "gosafe-development-secret"
 
 // Simple rate limiting store (in production, use Redis)
 const loginAttempts = new Map<string, { count: number; lastAttempt: number }>()
@@ -83,24 +88,25 @@ export async function POST(request: NextRequest) {
       user = users[0]
 
     } else if (role === "admin") {
+      await ensureAdminApprovalColumns()
       const ident = identifier || email
       const hasSpecial = await columnExists('administrators', 'special_id')
       const selectCols = hasSpecial
-        ? "admin_id as id, email, password_hash, full_name, special_id, 'admin' as role"
-        : "admin_id as id, email, password_hash, full_name, 'admin' as role"
+        ? "admin_id as id, email, password_hash, full_name, special_id, is_approved, approval_status, 'admin' as role"
+        : "admin_id as id, email, password_hash, full_name, is_approved, approval_status, 'admin' as role"
 
       console.log('Admin login attempt:', { ident, hasSpecial })
       const users = await query(
-        `SELECT ${selectCols} FROM administrators WHERE email = ?${hasSpecial ? ' OR special_id = ?' : ''}`,
+        `SELECT ${selectCols} FROM administrators WHERE (email = ?${hasSpecial ? ' OR special_id = ?' : ''}) AND is_approved = TRUE`,
         hasSpecial ? [ident, ident] : [ident]
       )
       console.log('Admin users found:', users.length)
 
       if (users.length === 0) {
-        return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
+        return NextResponse.json({ error: "Your admin account is pending approval or credentials are invalid" }, { status: 401 })
       }
       user = users[0]
-      console.log('Admin user:', { email: user.email, hasPassword: !!user.password_hash })
+      safeLog('Admin user:', { email: user.email, hasPassword: !!user.password_hash, isApproved: user.is_approved })
 
     } else if (role === "towing_service" || role === "emergency_service") {
       const ident = identifier || email
@@ -141,7 +147,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify password
-    console.log('Verifying password for user:', user.email)
+    safeLog('Verifying password for user:', user.email)
     const isValidPassword = await bcrypt.compare(password, user.password_hash)
     console.log('Password valid:', isValidPassword)
     if (!isValidPassword) {
@@ -151,7 +157,13 @@ export async function POST(request: NextRequest) {
     // Remove password from response
     const { password_hash, ...userWithoutPassword } = user
 
-    return NextResponse.json({ user: userWithoutPassword }, { status: 200 })
+    const token = jwt.sign(
+      { id: userWithoutPassword.id, email: userWithoutPassword.email, role, fullName: userWithoutPassword.full_name || userWithoutPassword.fullName },
+      AUTH_SECRET,
+      { expiresIn: '24h' }
+    )
+
+    return NextResponse.json({ user: userWithoutPassword, token }, { status: 200 })
   } catch (error) {
     console.error("Login error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

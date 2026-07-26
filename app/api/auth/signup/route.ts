@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from "next/server"
 import { query } from "@/lib/db"
 import bcrypt from "bcryptjs"
 import { v4 as uuidv4 } from "uuid"
+import { ensureAdminApprovalColumns } from "@/lib/db-helpers"
+import { safeLog } from "@/lib/logger"
 const { validateAdminOfficeSelection } = require("@/lib/admin-office-validation")
 
 function isValidEmail(email: string): boolean {
@@ -23,7 +25,26 @@ function isStrongPassword(password: string): boolean {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, password, fullName, phone, role, licenseNumber, vehicleNumber, transportCompany, companyName, dvlaOfficeId, serviceType, branchNumber, registrationNumber, address, latitude, longitude } = body
+    const {
+      email,
+      password,
+      fullName,
+      phone,
+      role,
+      licenseNumber,
+      vehicleNumber,
+      transportCompany,
+      companyName,
+      dvlaOfficeId,
+      officeNumber,
+      branchLocation,
+      serviceType,
+      branchNumber,
+      registrationNumber,
+      address,
+      latitude,
+      longitude,
+    } = body
 
     // Input validation
     if (!email || !password || !fullName || !phone || !role) {
@@ -122,8 +143,18 @@ export async function POST(request: NextRequest) {
       user = createdUser
 
     } else if (role === "admin") {
+      const inviteCode = body.adminInviteCode || body.inviteCode || body.invite_code
+      const configuredInvite = process.env.ADMIN_INVITE_CODE
+      if (!configuredInvite) {
+        return NextResponse.json({ error: "Admin signup is currently disabled. Contact support." }, { status: 503 })
+      }
+      if (!inviteCode || inviteCode !== configuredInvite) {
+        return NextResponse.json({ error: "Invalid admin invite code" }, { status: 401 })
+      }
+
+      await ensureAdminApprovalColumns()
+
       // Admins must provide the dvla office id and matching office_number and branch_location to prevent unauthorized signups
-      const { officeNumber, branchLocation } = body
       if (!dvlaOfficeId || !officeNumber || !branchLocation) {
         return NextResponse.json({ error: "DVLA office id, office number and branch location are required for admin registration" }, { status: 400 })
       }
@@ -138,7 +169,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Invalid DVLA office selected" }, { status: 400 })
       }
 
-      const officeValidation = validateAdminOfficeSelection(office)
+      const officeValidation = validateAdminOfficeSelection(office, officeNumber, branchLocation)
       if (!officeValidation.isValid) {
         return NextResponse.json({ error: officeValidation.error }, { status: 400 })
       }
@@ -150,22 +181,18 @@ export async function POST(request: NextRequest) {
       const canonicalRegion = officeValidation.canonicalRegion || office.region || null
 
       const existingAdmin = await query("SELECT admin_id FROM administrators WHERE email = ?", [email])
-      console.log('Existing admin check:', existingAdmin)
+      safeLog('Existing admin check:', existingAdmin.length)
       if (existingAdmin.length > 0) {
         return NextResponse.json({ error: "Admin already exists" }, { status: 400 })
       }
 
       await query(
-        `INSERT INTO administrators (admin_id, full_name, email, password_hash, role, dvla_office_id, special_id, office_number, branch_location, region) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [userId, fullName.trim(), email.toLowerCase(), hashedPassword, 'admin', canonicalOfficeId, specialId, canonicalOfficeNumber, canonicalBranchLocation, canonicalRegion]
+        `INSERT INTO administrators (admin_id, full_name, email, password_hash, role, dvla_office_id, special_id, office_number, branch_location, region, is_approved, approval_status, approved_by, approved_at) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [userId, fullName.trim(), email.toLowerCase(), hashedPassword, 'admin', canonicalOfficeId, specialId, canonicalOfficeNumber, canonicalBranchLocation, canonicalRegion, false, 'pending', null, null]
       )
 
-      const [createdUser] = await query(
-        "SELECT admin_id as id, email, full_name, special_id, 'admin' as role, dvla_office_id FROM administrators WHERE admin_id = ?",
-        [userId]
-      )
-      user = createdUser
+      return NextResponse.json({ message: 'Admin registration submitted. Awaiting approval.', requiresApproval: true }, { status: 201 })
 
     } else if (role === "emergency_service") {
       // Accept emergency service registration from UI; address/coords may be provided later or by admin

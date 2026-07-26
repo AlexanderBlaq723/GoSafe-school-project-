@@ -10,41 +10,55 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
+    // Validate period and reportType against known safe values before using in SQL structure
+    const allowedPeriods = ['week', 'month', 'year', 'custom']
+    const safePeriod = allowedPeriods.includes(period) ? period : 'month'
+    const safeYear = /^\d{4}$/.test(year) ? year : new Date().getFullYear().toString()
+
     let dateFilter = ''
     let groupBy = ''
+    let dateParams: any[] = []
 
-    if (period === 'custom' && startDate && endDate) {
-      dateFilter = `AND created_at BETWEEN '${startDate}' AND '${endDate}'`
+    if (safePeriod === 'custom' && startDate && endDate) {
+      dateFilter = 'AND created_at BETWEEN ? AND ?'
+      dateParams = [startDate, endDate]
       groupBy = 'DATE(created_at)'
     } else {
-      switch (period) {
+      switch (safePeriod) {
         case 'week':
-          dateFilter = `AND YEAR(created_at) = ${year} AND WEEK(created_at) = WEEK(NOW())`
+          dateFilter = 'AND YEAR(created_at) = ? AND WEEK(created_at) = WEEK(NOW())'
+          dateParams = [safeYear]
           groupBy = 'DATE(created_at)'
           break
         case 'month':
-          dateFilter = `AND YEAR(created_at) = ${year} AND MONTH(created_at) = MONTH(NOW())`
+          dateFilter = 'AND YEAR(created_at) = ? AND MONTH(created_at) = MONTH(NOW())'
+          dateParams = [safeYear]
           groupBy = 'DATE(created_at)'
           break
         case 'year':
-          dateFilter = `AND YEAR(created_at) = ${year}`
+          dateFilter = 'AND YEAR(created_at) = ?'
+          dateParams = [safeYear]
           groupBy = 'MONTH(created_at)'
           break
       }
     }
 
-    const typeFilter = reportType !== 'all' ? `AND incident_type = '${reportType}'` : ''
+    const typeFilter = reportType !== 'all' ? 'AND incident_type = ?' : ''
+    const typeParams = reportType !== 'all' ? [reportType] : []
+
+    const periodSelect = safePeriod === 'year' ? 'MONTH(created_at)' : 'DATE(created_at)'
 
     const analytics = await query(
       `SELECT 
-        ${period === 'year' ? 'MONTH(created_at)' : 'DATE(created_at)'} as period,
+        ${periodSelect} as period,
         COUNT(*) as count,
         incident_type,
         status
        FROM reports
        WHERE 1=1 ${dateFilter} ${typeFilter}
        GROUP BY ${groupBy}, incident_type, status
-       ORDER BY period ASC`
+       ORDER BY period ASC`,
+      [...dateParams, ...typeParams]
     )
 
     const summary = await query(
@@ -54,7 +68,8 @@ export async function GET(request: NextRequest) {
         SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
         AVG(TIMESTAMPDIFF(HOUR, created_at, updated_at)) as avg_resolution_hours
        FROM reports
-       WHERE 1=1 ${dateFilter} ${typeFilter}`
+       WHERE 1=1 ${dateFilter} ${typeFilter}`,
+      [...dateParams, ...typeParams]
     )
 
     return NextResponse.json({ analytics, summary: summary[0] })

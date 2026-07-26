@@ -16,6 +16,9 @@ function BusRequestsTab() {
 
   useEffect(() => {
     fetchBusRequests()
+    const onUpdate = () => fetchBusRequests()
+    window.addEventListener('busRequestsUpdated', onUpdate)
+    return () => window.removeEventListener('busRequestsUpdated', onUpdate)
   }, [])
 
   const fetchBusRequests = async () => {

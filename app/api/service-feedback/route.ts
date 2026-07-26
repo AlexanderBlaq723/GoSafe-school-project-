@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { queryDatabase } from '@/lib/db'
+import { safeLog } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -7,14 +8,14 @@ export async function GET(request: NextRequest) {
     const serviceId = searchParams.get('serviceId')
 
     console.log('=== SERVICE FEEDBACK API DEBUG ===')
-    console.log('Service ID received:', serviceId)
+    safeLog('Service ID received:', serviceId)
 
     if (!serviceId) {
       console.log('ERROR: No service ID provided')
       return NextResponse.json({ error: 'Service ID required' }, { status: 400 })
     }
 
-    console.log('Executing database query for service:', serviceId)
+    safeLog('Executing database query for service:', serviceId)
 
     let assignments = await queryDatabase(
       'user_database',
@@ -56,13 +57,13 @@ export async function POST(request: NextRequest) {
   try {
     const { assignmentId, status, feedback, resolution } = await request.json()
 
-    console.log('POST request received:', { assignmentId, status, feedback, resolution })
+    safeLog('POST request received:', { assignmentId, status })
 
     if (!assignmentId || !status) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    console.log('Updating assignment:', assignmentId, 'to status:', status)
+    safeLog('Updating assignment:', assignmentId)
 
     await queryDatabase(
       'user_database',

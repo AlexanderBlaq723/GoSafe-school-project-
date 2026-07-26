@@ -1,4 +1,5 @@
 import mysql from "mysql2/promise"
+import { safeLog, safeLogError } from "@/lib/logger"
 
 // Serverless-friendly connection pool management
 let pool: mysql.Pool | null = null
@@ -84,7 +85,7 @@ export function getPool(database?: string): mysql.Pool {
 
     // Log connection configuration (safely, without passwords)
     if (process.env.NODE_ENV !== "production") {
-      console.log("Database pool created:", {
+      safeLog("Database pool created:", {
         host: config.host,
         port: config.port,
         user: config.user,
@@ -126,11 +127,22 @@ export async function query<T = any>(sql: string, params?: any[]): Promise<T[]> 
 /**
  * Execute a query on a specific database
  */
+const ALLOWED_DATABASES = new Set([
+  'user_database',
+  'incident_emergency',
+  'ride_location',
+  'logs_audit',
+])
+
 export async function queryDatabase<T = any>(
   database: string,
   sql: string,
   params?: any[]
 ): Promise<T[]> {
+  if (!ALLOWED_DATABASES.has(database)) {
+    throw new Error(`Database '${database}' is not in the allowed list`)
+  }
+
   let connection: mysql.PoolConnection | null = null
 
   try {

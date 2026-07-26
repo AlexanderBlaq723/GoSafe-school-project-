@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { query } from "@/lib/db"
 import bcrypt from "bcryptjs"
+import { timingSafeEqual } from "crypto"
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,10 +11,18 @@ export async function POST(request: NextRequest) {
 
     if (newPassword.length < 6) return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 })
 
-    const rows = await query("SELECT * FROM password_resets WHERE token = ?", [token])
-    if (rows.length === 0) return NextResponse.json({ error: "Invalid or expired token" }, { status: 400 })
+    const rows = await query("SELECT * FROM password_resets WHERE expires_at > NOW()", [])
+    const reset = rows.find((r: any) => {
+      try {
+        const a = Buffer.from(String(r.token))
+        const b = Buffer.from(String(token))
+        return a.length === b.length && timingSafeEqual(a, b)
+      } catch {
+        return false
+      }
+    })
+    if (!reset) return NextResponse.json({ error: "Invalid or expired token" }, { status: 400 })
 
-    const reset = rows[0]
     const expiresAt = new Date(reset.expires_at)
     if (expiresAt.getTime() < Date.now()) {
       return NextResponse.json({ error: "Token has expired" }, { status: 400 })

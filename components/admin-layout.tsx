@@ -4,10 +4,10 @@ import type React from "react"
 
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
-import { Bell, Menu, User, LogOut, LayoutDashboard, BarChart3, Users } from "lucide-react"
+import { Bell, Menu, User, LogOut, LayoutDashboard, BarChart3, Users, CheckSquare } from "lucide-react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { useState } from "react"
+import { usePathname, useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import {
   DropdownMenu,
@@ -26,13 +26,40 @@ interface AdminLayoutProps {
 export function AdminLayout({ children }: AdminLayoutProps) {
   const { user, logout } = useAuth()
   const pathname = usePathname()
+  const router = useRouter()
+  const [unreadCount, setUnreadCount] = useState(0)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const navigation = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
     { name: "All Reports", href: "/admin/reports", icon: Users },
+    { name: "Approvals", href: "/admin/approvals", icon: CheckSquare },
   ]
+
+  useEffect(() => {
+    if (!user) {
+      setUnreadCount(0)
+      return
+    }
+
+    const fetchUnread = async () => {
+      try {
+        const res = await fetch(`/api/notifications?userId=${encodeURIComponent(user.id)}&recipientType=${encodeURIComponent(user.role)}`)
+        const data = await res.json()
+        const notifications = data.notifications || []
+        setUnreadCount(notifications.filter((n: any) => !n.is_read).length)
+      } catch (err) {
+        console.error('Failed to fetch admin notifications', err)
+      }
+    }
+
+    fetchUnread()
+
+    const onUpdate = () => fetchUnread()
+    window.addEventListener('notificationsUpdated', onUpdate)
+    return () => window.removeEventListener('notificationsUpdated', onUpdate)
+  }, [user])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -111,9 +138,20 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
             {/* Right Side Actions */}
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="relative">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative"
+                onClick={() => router.push('/dashboard/inbox')}
+              >
                 <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+                {unreadCount > 0 ? (
+                  <span className="absolute -top-1 -right-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-500 text-[10px] font-semibold text-white">
+                    {unreadCount}
+                  </span>
+                ) : (
+                  <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full opacity-0"></span>
+                )}
                 <span className="sr-only">Notifications</span>
               </Button>
 

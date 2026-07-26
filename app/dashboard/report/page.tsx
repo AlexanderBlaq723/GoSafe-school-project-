@@ -87,6 +87,7 @@ export default function ReportPage() {
       }
 
       setSuccess(true)
+      try { window.dispatchEvent(new CustomEvent('reportCreated')) } catch (_) {}
       setTimeout(() => {
         router.push("/dashboard")
       }, 2000)
