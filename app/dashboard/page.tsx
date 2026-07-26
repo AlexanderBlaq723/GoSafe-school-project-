@@ -45,6 +45,10 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
+    if (!user) {
+      setIsLoading(false)
+      return
+    }
     fetchDashboardData()
     const onReportCreated = () => fetchDashboardData()
     window.addEventListener('reportCreated', onReportCreated)

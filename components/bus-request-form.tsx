@@ -13,7 +13,7 @@ export default function BusRequestForm() {
   const [formData, setFormData] = useState({
     location: "",
     destination: "",
-    passengerCount: 1
+    passengerCount: "1"
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,7 +35,7 @@ export default function BusRequestForm() {
             latitude,
             longitude,
             destination: formData.destination,
-            passengerCount: formData.passengerCount
+            passengerCount: Math.max(1, parseInt(formData.passengerCount) || 1)
           })
         })
 
@@ -43,7 +43,7 @@ export default function BusRequestForm() {
         
         if (response.ok) {
           alert(data.message)
-          setFormData({ location: "", destination: "", passengerCount: 1 })
+          setFormData({ location: "", destination: "", passengerCount: "1" })
           // Notify other parts of the app to refresh requests
           try { window.dispatchEvent(new CustomEvent('busRequestsUpdated')) } catch (e) {}
         } else {
@@ -94,7 +94,7 @@ export default function BusRequestForm() {
               type="number"
               min="1"
               value={formData.passengerCount}
-              onChange={(e) => setFormData({...formData, passengerCount: parseInt(e.target.value) || 1})}
+              onChange={(e) => setFormData({...formData, passengerCount: e.target.value})}
             />
           </div>
           

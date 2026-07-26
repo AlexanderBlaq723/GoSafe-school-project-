@@ -132,7 +132,7 @@ export default function AnalyticsPage() {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <Card>
               <CardContent className="pt-6">
                 <div className="text-2xl font-bold">{summary.total || 0}</div>
@@ -147,14 +147,20 @@ export default function AnalyticsPage() {
             </Card>
             <Card>
               <CardContent className="pt-6">
+                <div className="text-2xl font-bold text-gray-600">{summary.closed || 0}</div>
+                <p className="text-sm text-gray-600">Closed</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
                 <div className="text-2xl font-bold text-yellow-600">{summary.pending || 0}</div>
                 <p className="text-sm text-gray-600">Pending</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6">
-                <div className="text-2xl font-bold text-blue-600">{summary.avg_resolution_hours ? Number(summary.avg_resolution_hours).toFixed(1) : 0}h</div>
-                <p className="text-sm text-gray-600">Avg Resolution Time</p>
+                <div className="text-2xl font-bold text-blue-600">{summary.in_progress || 0}</div>
+                <p className="text-sm text-gray-600">In Progress</p>
               </CardContent>
             </Card>
           </div>

@@ -150,7 +150,7 @@ export default function AdminDashboardPage() {
 
   const fetchData = async () => {
     try {
-      const [driversRes, requestsRes, flaggedRes, reportsRes, servicesRes, allServicesRes] = await Promise.all([
+      const results = await Promise.allSettled([
         fetch('/api/admin?action=drivers'),
         fetch('/api/admin?action=vehicle-requests'),
         fetch('/api/admin?action=flagged-drivers'),
@@ -158,14 +158,16 @@ export default function AdminDashboardPage() {
         fetch('/api/admin?action=pending-approvals'),
         fetch('/api/admin?action=emergency-services-all')
       ])
-      
-      const driversData = await driversRes.json()
-      const requestsData = await requestsRes.json()
-      const flaggedData = await flaggedRes.json()
-      const reportsData = await reportsRes.json()
-      const approvalsData = await servicesRes.json()
-      const allServicesData = await allServicesRes.json()
-      
+
+      const [driversRes, requestsRes, flaggedRes, reportsRes, servicesRes, allServicesRes] = results
+
+      const driversData   = driversRes.status   === 'fulfilled' && driversRes.value.ok   ? await driversRes.value.json()   : {}
+      const requestsData  = requestsRes.status  === 'fulfilled' && requestsRes.value.ok  ? await requestsRes.value.json()  : {}
+      const flaggedData   = flaggedRes.status   === 'fulfilled' && flaggedRes.value.ok   ? await flaggedRes.value.json()   : {}
+      const reportsData   = reportsRes.status   === 'fulfilled' && reportsRes.value.ok   ? await reportsRes.value.json()   : {}
+      const approvalsData = servicesRes.status  === 'fulfilled' && servicesRes.value.ok  ? await servicesRes.value.json()  : {}
+      const allServicesData = allServicesRes.status === 'fulfilled' && allServicesRes.value.ok ? await allServicesRes.value.json() : {}
+
       setDrivers(driversData.drivers || [])
       setVehicleRequests(requestsData.requests || [])
       setFlaggedDrivers(flaggedData.flaggedDrivers || [])

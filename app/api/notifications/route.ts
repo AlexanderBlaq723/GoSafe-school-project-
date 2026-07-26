@@ -11,14 +11,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Missing required parameters" }, { status: 400 })
     }
 
-    const notifications = await query(
-      `SELECT * FROM notifications 
-       WHERE (recipient_id = ? OR recipient_type = 'all') 
-       AND recipient_type IN (?, 'all')
-       ORDER BY created_at DESC 
-       LIMIT 50`,
-      [userId, recipientType]
-    )
+    // Admins are not stored with recipient_type='admin' in the notifications table.
+    // For admins, fetch by recipient_id only (plus broadcast 'all' rows).
+    // For other roles, also filter by recipient_type to avoid cross-role leakage.
+    const notifications = recipientType === 'admin'
+      ? await query(
+          `SELECT * FROM notifications
+           WHERE recipient_id = ? OR recipient_type = 'all'
+           ORDER BY created_at DESC
+           LIMIT 50`,
+          [userId]
+        )
+      : await query(
+          `SELECT * FROM notifications
+           WHERE (recipient_id = ? OR recipient_type = 'all')
+           AND recipient_type IN (?, 'all')
+           ORDER BY created_at DESC
+           LIMIT 50`,
+          [userId, recipientType]
+        )
 
     return NextResponse.json({ notifications })
   } catch (error) {
