@@ -3,6 +3,7 @@ import { query } from "@/lib/db"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { ensureAdminApprovalColumns } from "@/lib/db-helpers"
+import { safeLog } from "@/lib/logger"
 
 const AUTH_SECRET = process.env.AUTH_SECRET || process.env.JWT_SECRET || "gosafe-development-secret"
 
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Your admin account is pending approval or credentials are invalid" }, { status: 401 })
       }
       user = users[0]
-      console.log('Admin user:', { email: user.email, hasPassword: !!user.password_hash, isApproved: user.is_approved })
+      safeLog('Admin user:', { email: user.email, hasPassword: !!user.password_hash, isApproved: user.is_approved })
 
     } else if (role === "towing_service" || role === "emergency_service") {
       const ident = identifier || email
@@ -146,7 +147,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify password
-    console.log('Verifying password for user:', user.email)
+    safeLog('Verifying password for user:', user.email)
     const isValidPassword = await bcrypt.compare(password, user.password_hash)
     console.log('Password valid:', isValidPassword)
     if (!isValidPassword) {

@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { v4 as uuidv4 } from 'uuid'
 import NotificationService from '@/lib/notification-service'
 import { query as userQuery } from '@/lib/db'
+import { safeLog } from '@/lib/logger'
 
 // Calculate distance between two coordinates (Haversine formula)
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     const { reportId, serviceTypes, latitude, longitude, assignedBy, report: incomingReport } = parsed.data
 
-    console.log('Emergency service request (v2):', { reportId, serviceTypes, latitude, longitude })
+    safeLog('Emergency service request (v2):', { reportId, serviceTypes, latitude, longitude })
 
     if ((!reportId && !incomingReport) || !serviceTypes || latitude === undefined || longitude === undefined) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
              ORDER BY service_id`,
             []
           )
-          console.log('Towing services query result:', services)
+          safeLog('Towing services query result:', services.length)
         } else {
           // Query emergency_services table from user_database
           services = await queryDatabase<any[]>(
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
           )
         }
 
-        console.log(`Found ${services.length} ${serviceType} services`)
+        safeLog(`Found ${services.length} ${serviceType} services`, undefined)
 
         if (services.length === 0) {
           console.log(`No available ${serviceType} services found`)
@@ -117,7 +118,7 @@ export async function POST(request: NextRequest) {
             [assignmentId, reportId, nearestService.id, assignedBy || null, assignedBy ? 'manual' : 'automatic']
           )
 
-          console.log(`Created assignment ${assignmentId} for ${nearestService.service_name}`)
+          safeLog(`Created assignment ${assignmentId} for`, nearestService.service_name)
 
           // Get report details for notification. Prefer incoming report (from body) if provided,
           // otherwise fetch from DB and type it as `Report[]`.

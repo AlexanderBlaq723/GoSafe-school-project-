@@ -144,7 +144,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Debug: inspect payload shape before stringifying to catch circular structures
       try {
-        console.debug('signup payload:', payload)
+        const safePayload = { ...payload, password: '[REDACTED]' }
+        console.debug('signup payload:', JSON.stringify(safePayload).replace(/[\r\n]/g, ' '))
       } catch (e) {
         // ignore logging errors
       }

@@ -21,35 +21,34 @@ export default function DashboardPage() {
   const [recentReports, setRecentReports] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      if (!user) return
-
-      try {
-        const [statsRes, reportsRes] = await Promise.all([
-          fetch(`/api/dashboard/stats?userId=${user.id}&role=${user.role}`),
-          fetch(`/api/reports?userId=${user.id}&role=${user.role}`),
-        ])
-
-        const statsData = await statsRes.json()
-        const reportsData = await reportsRes.json()
-
-        setStats({
-          totalReports: statsData.totalReports || 0,
-          pendingReports: statsData.pendingReports || 0,
-          reviewedReports: statsData.reviewedReports || 0,
-          handledReports: statsData.handledReports || 0,
-        })
-
-        setRecentReports(reportsData.reports?.slice(0, 3) || [])
-      } catch (error) {
-        console.error("[v0] Error fetching dashboard data:", error)
-      } finally {
-        setIsLoading(false)
-      }
+  const fetchDashboardData = async () => {
+    if (!user) return
+    try {
+      const [statsRes, reportsRes] = await Promise.all([
+        fetch(`/api/dashboard/stats?userId=${user.id}&role=${user.role}`),
+        fetch(`/api/reports?userId=${user.id}&role=${user.role}`),
+      ])
+      const statsData = await statsRes.json()
+      const reportsData = await reportsRes.json()
+      setStats({
+        totalReports: statsData.totalReports || 0,
+        pendingReports: statsData.pendingReports || 0,
+        reviewedReports: statsData.reviewedReports || 0,
+        handledReports: statsData.handledReports || 0,
+      })
+      setRecentReports(reportsData.reports?.slice(0, 3) || [])
+    } catch (error) {
+      console.error("[v0] Error fetching dashboard data:", error)
+    } finally {
+      setIsLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchDashboardData()
+    const onReportCreated = () => fetchDashboardData()
+    window.addEventListener('reportCreated', onReportCreated)
+    return () => window.removeEventListener('reportCreated', onReportCreated)
   }, [user])
 
   const statsDisplay = [
@@ -95,18 +94,18 @@ export default function DashboardPage() {
       <DashboardLayout>
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
           {user?.role === "towing_service" || user?.role === "emergency_service" ? (
-            <div className="max-w-6xl mx-auto p-6 space-y-8">
+            <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6 sm:space-y-8">
               <div className="animate-in slide-in-from-top duration-500">
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/20">
-                  <div className="flex items-center gap-6">
-                    <div className="p-4 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl text-white">
-                      <Car className="h-12 w-12" />
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-5 sm:p-8 shadow-xl border border-white/20">
+                  <div className="flex items-center gap-4 sm:gap-6">
+                    <div className="p-3 sm:p-4 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl text-white flex-shrink-0">
+                      <Car className="h-8 w-8 sm:h-12 sm:w-12" />
                     </div>
                     <div>
-                      <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-2">
+                      <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-1 sm:mb-2">
                         Welcome, {user?.fullName}
                       </h1>
-                      <p className="text-gray-600 text-lg font-medium">
+                      <p className="text-gray-600 text-sm sm:text-lg font-medium">
                         {user.role === "towing_service" ? "Towing" : "Emergency"} Service Dashboard
                       </p>
                       {user?.specialId && (
@@ -156,20 +155,20 @@ export default function DashboardPage() {
               </Card>
             </div>
           ) : (
-            <div className="max-w-7xl mx-auto p-6 space-y-8">
+            <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6 sm:space-y-8">
               {/* Welcome Section */}
               <div className="animate-in slide-in-from-top duration-500">
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/20">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                    <div className="flex items-center gap-6">
-                      <div className="p-4 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl text-white animate-float">
-                        <AlertCircle className="h-12 w-12" />
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-5 sm:p-8 shadow-xl border border-white/20">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">
+                    <div className="flex items-center gap-3 sm:gap-6">
+                      <div className="p-3 sm:p-4 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl text-white animate-float flex-shrink-0">
+                        <AlertCircle className="h-8 w-8 sm:h-12 sm:w-12" />
                       </div>
                       <div>
-                        <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-2">
+                        <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-1 sm:mb-2">
                           Welcome back, {user?.fullName}
                         </h1>
-                        <p className="text-gray-600 text-lg font-medium">
+                        <p className="text-gray-600 text-sm sm:text-lg font-medium">
                           Here&apos;s what&apos;s happening with your reports today.
                         </p>
                         {user?.specialId && (
@@ -180,9 +179,9 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div className="flex gap-3">
-                      <Button asChild size="lg" className="h-14 px-8 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold transition-all duration-200 hover:scale-105">
+                      <Button asChild size="lg" className="h-12 sm:h-14 px-5 sm:px-8 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold transition-all duration-200 hover:scale-105 w-full lg:w-auto">
                         <Link href="/dashboard/report">
-                          <Plus className="mr-3 h-6 w-6" />
+                          <Plus className="mr-2 sm:mr-3 h-5 sm:h-6 w-5 sm:w-6" />
                           New Report
                         </Link>
                       </Button>
@@ -193,7 +192,7 @@ export default function DashboardPage() {
 
               {/* Quick Actions for Passengers */}
               {user?.role === 'passenger' && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in slide-in-from-left duration-700">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 animate-in slide-in-from-left duration-700">
                   <div className="hover-lift">
                     <BusRequestForm />
                   </div>
@@ -218,7 +217,7 @@ export default function DashboardPage() {
 
               {/* Quick Actions for Drivers */}
               {user?.role === 'driver' && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in slide-in-from-right duration-700">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 animate-in slide-in-from-right duration-700">
                   <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm hover-lift">
                     <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-t-lg">
                       <CardTitle className="text-lg font-bold flex items-center gap-2">
@@ -334,23 +333,23 @@ export default function DashboardPage() {
                       {recentReports.map((report, index) => (
                         <div
                           key={report.id}
-                          className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 border-0 rounded-xl shadow-lg bg-white hover:shadow-xl transition-all duration-300 hover:-translate-y-1 animate-slide-up`}
+                          className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 sm:p-6 border-0 rounded-xl shadow-lg bg-white hover:shadow-xl transition-all duration-300 hover:-translate-y-1 animate-slide-up`}
                           style={{ animationDelay: `${index * 100}ms` }}
                         >
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-center gap-3">
-                              <h3 className="font-bold text-lg text-gray-900">{report.description || report.title || 'Untitled Report'}</h3>
-                              <Badge className="bg-blue-100 text-blue-800 px-3 py-1 font-semibold">
+                          <div className="flex-1 space-y-1 sm:space-y-2 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="font-bold text-base sm:text-lg text-gray-900 truncate">{report.description || report.title || 'Untitled Report'}</h3>
+                              <Badge className="bg-blue-100 text-blue-800 px-2 sm:px-3 py-1 font-semibold text-xs sm:text-sm shrink-0">
                                 {getTypeLabel(report.incident_type || report.type || 'other')}
                               </Badge>
                             </div>
-                            <p className="text-gray-700 font-medium">{report.location}</p>
-                            <p className="text-sm text-gray-500 flex items-center gap-2">
-                              <Clock className="h-4 w-4" />
+                            <p className="text-gray-700 font-medium text-sm truncate">{report.location}</p>
+                            <p className="text-xs sm:text-sm text-gray-500 flex items-center gap-2">
+                              <Clock className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
                               {formatDate(report.created_at)}
                             </p>
                           </div>
-                          <Badge className={`${getStatusColor(report.status)} px-4 py-2 font-bold text-sm`}>
+                          <Badge className={`${getStatusColor(report.status)} px-3 sm:px-4 py-1 sm:py-2 font-bold text-xs sm:text-sm self-start sm:self-center shrink-0`}>
                             {report.status.toUpperCase()}
                           </Badge>
                         </div>

@@ -9,10 +9,16 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get("userId")
     const role = searchParams.get("role")
 
+    // Security: always filter by userId unless role is explicitly admin.
+    // If userId is missing/empty for a non-admin, return empty rather than leaking all reports.
+    if (role !== "admin" && !userId) {
+      return NextResponse.json({ reports: [] }, { status: 200 })
+    }
+
     let sql = `SELECT * FROM reports ORDER BY created_at DESC`
     let params: any[] = []
 
-    if (role !== "admin" && userId) {
+    if (role !== "admin") {
       sql = `SELECT * FROM reports WHERE user_id = ? ORDER BY created_at DESC`
       params = [userId]
     }
@@ -106,7 +112,12 @@ export async function POST(request: NextRequest) {
 
       if (serviceTypes.length > 0) {
         try {
-          await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/emergency-services`, {
+          const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+          const parsedBase = new URL(baseUrl)
+          if (!['http:', 'https:'].includes(parsedBase.protocol)) {
+            throw new Error('Invalid base URL protocol')
+          }
+          await fetch(`${baseUrl}/api/emergency-services`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

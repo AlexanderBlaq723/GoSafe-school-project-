@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { query } from "@/lib/db"
 import { v4 as uuidv4 } from "uuid"
+import { safeLog } from "@/lib/logger"
 
 // Check if current time is peak hour (7-9 AM, 5-7 PM)
 function isPeakHour(): boolean {
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (passengerId) {
-      console.log("Fetching requests for passenger ID:", passengerId)
+      safeLog("Fetching requests for passenger ID:", passengerId)
       // Get passenger's requests
       const requests = await query(
         `SELECT * FROM bus_requests WHERE passenger_id = ? ORDER BY request_time DESC`,
@@ -93,7 +94,7 @@ export async function GET(request: NextRequest) {
         request.acceptances = JSON.stringify(acceptances)
       }
       
-      console.log("Found requests:", requests.length)
+      safeLog("Found requests:", requests.length)
       return NextResponse.json({ requests })
     }
 
@@ -155,7 +156,7 @@ export async function PATCH(request: NextRequest) {
 
     if (action === 'accept') {
       if (!driverId || !driverName || !driverPhone || !busNumber || !busCapacity) {
-        console.log("Missing fields:", { driverId, driverName, driverPhone, busNumber, busCapacity })
+        safeLog("Missing fields:", { driverId, driverName, driverPhone, busNumber, busCapacity })
         return NextResponse.json({ error: "Bus details required" }, { status: 400 })
       }
 

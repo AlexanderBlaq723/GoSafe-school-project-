@@ -3,6 +3,7 @@ import { query } from "@/lib/db"
 import bcrypt from "bcryptjs"
 import { v4 as uuidv4 } from "uuid"
 import { ensureAdminApprovalColumns } from "@/lib/db-helpers"
+import { safeLog } from "@/lib/logger"
 const { validateAdminOfficeSelection } = require("@/lib/admin-office-validation")
 
 function isValidEmail(email: string): boolean {
@@ -180,7 +181,7 @@ export async function POST(request: NextRequest) {
       const canonicalRegion = officeValidation.canonicalRegion || office.region || null
 
       const existingAdmin = await query("SELECT admin_id FROM administrators WHERE email = ?", [email])
-      console.log('Existing admin check:', existingAdmin)
+      safeLog('Existing admin check:', existingAdmin.length)
       if (existingAdmin.length > 0) {
         return NextResponse.json({ error: "Admin already exists" }, { status: 400 })
       }
