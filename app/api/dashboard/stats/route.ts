@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { query } from "@/lib/db"
+import { safeLog } from "@/lib/logger"
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,9 +31,10 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ totalReports: 0, pendingReports: 0, reviewedReports: 0, handledReports: 0 })
       }
 
-      const [totalReports] = await query(
-        "SELECT COUNT(*) as count FROM reports WHERE user_id = ?", [userId]
-      )
+      const q1 = "SELECT COUNT(*) as count FROM reports WHERE user_id = ?"
+      safeLog("Querying reports for user", { sql: q1, userId, userIdType: typeof userId, userIdLength: userId.length })
+      const [totalReports] = await query(q1, [userId])
+      safeLog("Query result for totalReports", { totalReportsRaw: totalReports })
       const [pendingReports] = await query(
         "SELECT COUNT(*) as count FROM reports WHERE user_id = ? AND status = 'pending'", [userId]
       )
@@ -48,6 +50,13 @@ export async function GET(request: NextRequest) {
         pendingReports: Number((pendingReports as any).count ?? 0),
         reviewedReports: Number((reviewedReports as any).count ?? 0),
         handledReports: Number((handledReports as any).count ?? 0),
+        _debug: {
+          timestamp: Date.now(),
+          receivedUserId: userId,
+          userIdLength: userId?.length,
+          userIdType: typeof userId,
+          rawTotalReports: totalReports
+        }
       })
     }
   } catch (error) {
